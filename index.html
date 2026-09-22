@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NaijaPrice - Local Market Price Checker</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <header>
+    <h1>🛒 NaijaPrice</h1>
+    <p class="tagline">Check local market prices before you buy</p>
+    <p class="tagline">By Ikechi Emmanuel</p>
+  </header>
+
+  <main>
+    <section class="search-section">
+      <input type="text" id="searchBox" placeholder="Search an item (e.g. garri, beans, fuel)">
+      <button onclick="searchPrice()">Search</button>
+      <div id="result"></div>
+    </section>
+
+    <section class="add-section">
+      <h2>➕ Add a Price</h2>
+      <p>Help others by sharing a price you paid recently.</p>
+      <input type="text" id="itemName" placeholder="Item name (e.g. garri)">
+      <input type="text" id="itemPrice" placeholder="Price (e.g. ₦2,000)">
+      <input type="text" id="itemLocation" placeholder="Location (e.g. Yaba Market)">
+      <button onclick="addPrice()">Add Price</button>
+      <p id="addStatus"></p>
+    </section>
+
+    <section class="list-section">
+      <h2>📋 All Reported Prices</h2>
+      <div id="allPrices"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Built by Ikechi Emmanuel 🇳🇬</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
