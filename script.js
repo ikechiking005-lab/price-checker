@@ -12,6 +12,12 @@ window.onload = function () {
   renderAllPrices();
 };
 
+// Opens/closes the slide-out menu
+function toggleMenu() {
+  document.getElementById("sideMenu").classList.toggle("open");
+  document.getElementById("overlay").classList.toggle("show");
+}
+
 // Search for a specific item
 function searchPrice() {
   const input = document.getElementById("searchBox").value.toLowerCase().trim();
@@ -68,4 +74,5 @@ function renderAllPrices() {
 // Helper: makes the first letter uppercase (garri -> Garri)
 function capitalize(word) {
   return word.charAt(0).toUpperCase() + word.slice(1);
-}
+    }
+                                                   
