@@ -12,7 +12,12 @@ import {
   getFirestore,
   doc,
   setDoc,
-  getDoc
+  getDoc,
+  collection,
+  query,
+  where,
+  getDocs,
+  updateDoc
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 // Your web app's Firebase configuration
@@ -165,21 +170,41 @@ function showLoggedInView(name, role) {
   document.getElementById("welcomeName").innerText = name;
 
   const roleStatus = document.getElementById("roleStatus");
+  const addPriceSection = document.getElementById("addPrice");
   const addPriceNote = document.getElementById("addPriceNote");
   const addPriceForm = document.getElementById("addPriceForm");
 
   if (role === "buyer") {
+    // Buyers never need to see the seller "Add Product" section at all
     roleStatus.innerHTML = "You're signed in as a <strong>Buyer</strong>.";
-    addPriceNote.innerHTML = "Only verified sellers can add prices.";
-    addPriceForm.style.display = "none";
+    addPriceSection.style.display = "none";
   } else if (role === "pending_seller") {
-    roleStatus.innerHTML = "⏳ Your seller account is <strong>pending review</strong>. You'll be able to add prices once approved.";
+    roleStatus.innerHTML = "⏳ Your seller account is <strong>pending review</strong>. You'll be able to add products once approved.";
+    addPriceSection.style.display = "block";
     addPriceNote.innerHTML = "Your seller account is still pending review.";
     addPriceForm.style.display = "none";
   } else if (role === "verified_seller") {
-    roleStatus.innerHTML = "✅ You're a <strong>Verified Seller</strong>. You can add prices below.";
+    roleStatus.innerHTML = "✅ You're a <strong>Verified Seller</strong>. You can add products below.";
+    addPriceSection.style.display = "block";
     addPriceNote.innerHTML = "";
     addPriceForm.style.display = "block";
+  } else if (role === "admin") {
+    roleStatus.innerHTML = "🛠️ You're logged in as <strong>Admin</strong>.";
+    addPriceSection.style.display = "block";
+    addPriceNote.innerHTML = "";
+    addPriceForm.style.display = "block";
+  }
+
+  // Show the admin panel link/section only for admins
+  const adminSection = document.getElementById("adminSection");
+  const adminMenuLink = document.getElementById("adminMenuLink");
+  if (role === "admin") {
+    adminSection.style.display = "block";
+    adminMenuLink.style.display = "block";
+    loadPendingSellers();
+  } else {
+    adminSection.style.display = "none";
+    adminMenuLink.style.display = "none";
   }
 }
 
@@ -187,8 +212,53 @@ function showLoggedInView(name, role) {
 function showLoggedOutView() {
   document.getElementById("loggedOutView").style.display = "block";
   document.getElementById("loggedInView").style.display = "none";
-  document.getElementById("addPriceNote").innerHTML = "Log in as a verified seller to add prices.";
-  document.getElementById("addPriceForm").style.display = "none";
+  document.getElementById("addPrice").style.display = "none";
+  document.getElementById("adminSection").style.display = "none";
+  document.getElementById("adminMenuLink").style.display = "none";
+}
+
+// ===== ADMIN: LOAD ALL PENDING SELLERS =====
+async function loadPendingSellers() {
+  const listDiv = document.getElementById("pendingSellersList");
+  listDiv.innerHTML = "Loading...";
+
+  const usersRef = collection(db, "users");
+  const q = query(usersRef, where("role", "==", "pending_seller"));
+  const snapshot = await getDocs(q);
+
+  if (snapshot.empty) {
+    listDiv.innerHTML = "<p>No pending sellers right now. 🎉</p>";
+    return;
+  }
+
+  let html = "";
+  snapshot.forEach((docSnap) => {
+    const u = docSnap.data();
+    const id = docSnap.id;
+    html += `
+      <div class="pending-card">
+        <p><strong>${u.name}</strong></p>
+        <p>🏪 ${u.shopName} — ${u.market}</p>
+        <p>📞 ${u.phone}</p>
+        <p>✉️ ${u.email}</p>
+        <button onclick="approveSeller('${id}')" class="approve-btn">✅ Approve</button>
+        <button onclick="rejectSeller('${id}')" class="reject-btn">❌ Reject</button>
+      </div>
+    `;
+  });
+  listDiv.innerHTML = html;
+}
+
+// ===== ADMIN: APPROVE A SELLER =====
+async function approveSeller(userId) {
+  await updateDoc(doc(db, "users", userId), { role: "verified_seller" });
+  loadPendingSellers();
+}
+
+// ===== ADMIN: REJECT A SELLER (sends them back to plain buyer) =====
+async function rejectSeller(userId) {
+  await updateDoc(doc(db, "users", userId), { role: "buyer" });
+  loadPendingSellers();
 }
 
 // ===== MENU TOGGLE =====
@@ -267,4 +337,6 @@ window.logOut = logOut;
 window.toggleMenu = toggleMenu;
 window.searchPrice = searchPrice;
 window.addPrice = addPrice;
-  
+window.approveSeller = approveSeller;
+window.rejectSeller = rejectSeller;
+      
