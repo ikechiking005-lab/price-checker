@@ -339,4 +339,4 @@ window.searchPrice = searchPrice;
 window.addPrice = addPrice;
 window.approveSeller = approveSeller;
 window.rejectSeller = rejectSeller;
-      
+    
