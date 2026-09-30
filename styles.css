@@ -22,16 +22,19 @@ body {
 header {
   background: linear-gradient(135deg, #0a2b20, #16543f);
   color: white;
-  padding: 20px 16px 30px;
+  padding: 16px 16px 30px;
   text-align: center;
-  position: relative;
   border-bottom: 3px solid var(--accent);
 }
 
+.header-top-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  width: 100%;
+}
+
 .menu-btn {
-  position: absolute;
-  top: 16px;
-  right: 16px;
   background: rgba(255,255,255,0.12);
   border: 1px solid rgba(212,175,55,0.4);
   color: var(--accent);
