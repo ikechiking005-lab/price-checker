@@ -104,7 +104,7 @@ async function signUpBuyer() {
     });
     status.innerHTML = "✅ Account created! You're now logged in.";
   } catch (error) {
-    status.innerHTML = "❌ " + error.message;
+    status.innerHTML = "❌ " + friendlyError(error);
   }
 }
 
@@ -133,9 +133,9 @@ async function signUpSeller() {
       email: email,
       role: "pending_seller"
     });
-    status.innerHTML = "✅ Application submitted! Your account is pending review before you can add prices.";
+    status.innerHTML = "✅ Application submitted! Your account is pending review before you can add products.";
   } catch (error) {
-    status.innerHTML = "❌ " + error.message;
+    status.innerHTML = "❌ " + friendlyError(error);
   }
 }
 
@@ -154,7 +154,7 @@ async function logIn() {
     await signInWithEmailAndPassword(auth, email, password);
     status.innerHTML = "";
   } catch (error) {
-    status.innerHTML = "❌ " + error.message;
+    status.innerHTML = "❌ " + friendlyError(error);
   }
 }
 
@@ -169,28 +169,38 @@ function showLoggedInView(name, role) {
   document.getElementById("loggedInView").style.display = "block";
   document.getElementById("welcomeName").innerText = name;
 
+  // Unlock the marketplace (search, categories, prices, about) now that they're logged in
+  document.getElementById("marketplaceContent").style.display = "block";
+  document.getElementById("aboutMenuLink").style.display = "block";
+
   const roleStatus = document.getElementById("roleStatus");
   const addPriceSection = document.getElementById("addPrice");
   const addPriceNote = document.getElementById("addPriceNote");
   const addPriceForm = document.getElementById("addPriceForm");
 
+  const addPriceMenuLink = document.getElementById("addPriceMenuLink");
+
   if (role === "buyer") {
     // Buyers never need to see the seller "Add Product" section at all
     roleStatus.innerHTML = "You're signed in as a <strong>Buyer</strong>.";
     addPriceSection.style.display = "none";
+    addPriceMenuLink.style.display = "none";
   } else if (role === "pending_seller") {
     roleStatus.innerHTML = "⏳ Your seller account is <strong>pending review</strong>. You'll be able to add products once approved.";
     addPriceSection.style.display = "block";
+    addPriceMenuLink.style.display = "block";
     addPriceNote.innerHTML = "Your seller account is still pending review.";
     addPriceForm.style.display = "none";
   } else if (role === "verified_seller") {
     roleStatus.innerHTML = "✅ You're a <strong>Verified Seller</strong>. You can add products below.";
     addPriceSection.style.display = "block";
+    addPriceMenuLink.style.display = "block";
     addPriceNote.innerHTML = "";
     addPriceForm.style.display = "block";
   } else if (role === "admin") {
     roleStatus.innerHTML = "🛠️ You're logged in as <strong>Admin</strong>.";
     addPriceSection.style.display = "block";
+    addPriceMenuLink.style.display = "block";
     addPriceNote.innerHTML = "";
     addPriceForm.style.display = "block";
   }
@@ -215,6 +225,9 @@ function showLoggedOutView() {
   document.getElementById("addPrice").style.display = "none";
   document.getElementById("adminSection").style.display = "none";
   document.getElementById("adminMenuLink").style.display = "none";
+  document.getElementById("marketplaceContent").style.display = "none";
+  document.getElementById("aboutMenuLink").style.display = "none";
+  document.getElementById("addPriceMenuLink").style.display = "none";
 }
 
 // ===== ADMIN: LOAD ALL PENDING SELLERS =====
@@ -325,6 +338,30 @@ function renderAllPrices() {
 
 function capitalize(word) {
   return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
+// Turns technical Firebase error codes into plain, human messages
+function friendlyError(error) {
+  const code = error.code || "";
+  if (code.includes("email-already-in-use")) {
+    return "This email is already registered. Please log in instead.";
+  }
+  if (code.includes("invalid-credential") || code.includes("wrong-password") || code.includes("user-not-found")) {
+    return "Incorrect email or password. Please try again.";
+  }
+  if (code.includes("weak-password")) {
+    return "Please choose a password with at least 6 characters.";
+  }
+  if (code.includes("invalid-email")) {
+    return "Please enter a valid email address.";
+  }
+  if (code.includes("network-request-failed")) {
+    return "Network error. Please check your connection and try again.";
+  }
+  if (code.includes("too-many-requests")) {
+    return "Too many attempts. Please wait a moment and try again.";
+  }
+  return "Something went wrong. Please try again.";
 }
 
 // Make these functions callable from onclick="" in the HTML
