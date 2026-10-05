@@ -1,1247 +1,418 @@
-/* =========================================================
-   NAIJAPRICE - MAIN APPLICATION
-   Buyer + Seller + Products + Following + Messaging
-   ========================================================= */
+// ===== FIREBASE SETUP =====
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  updateProfile,
+  sendPasswordResetEmail
+} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  getDoc,
+  collection,
+  query,
+  where,
+  getDocs,
+  updateDoc
+} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
-
-/* =========================================================
-   FIREBASE CONFIGURATION
-   =========================================================
-
-   REPLACE THESE VALUES WITH YOUR FIREBASE WEB APP CONFIG.
-
-   Firebase Console:
-   Project Settings
-   → Your apps
-   → Web app
-   → SDK setup and configuration
-*/
-
+// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "YOUR_FIREBASE_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.firebasestorage.app",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_FIREBASE_APP_ID"
+  apiKey: "AIzaSyBFtah1h4C02cMSw10nyEuuIWLoS2JnNXc",
+  authDomain: "naijaprice-cb736.firebaseapp.com",
+  projectId: "naijaprice-cb736",
+  storageBucket: "naijaprice-cb736.firebasestorage.app",
+  messagingSenderId: "446042692683",
+  appId: "1:446042692683:web:3ffe1cf803432f5ea301ce",
+  measurementId: "G-5FJRMGT6EY"
 };
 
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-/* =========================================================
-   LOAD FIREBASE
-   ========================================================= */
+// Keeps track of the currently logged-in user's role ("buyer", "pending_seller", "verified_seller")
+let currentUserRole = null;
 
-function loadFirebaseScript(src) {
-  return new Promise((resolve, reject) => {
-    const script = document.createElement("script");
+// ===== PRICE DATA (still in-memory for now — Phase 3 will save this permanently) =====
+let prices = [
+  { item: "garri", price: "₦2,000 - ₦2,200 per paint bucket", location: "Yaba Market" },
+  { item: "beans", price: "₦3,500 - ₦3,800 per paint bucket", location: "Yaba Market" },
+  { item: "rice", price: "₦75,000 - ₦80,000 per 50kg bag", location: "Mile 12 Market" },
+  { item: "fuel", price: "₦900 - ₦950 per litre", location: "Lagos" }
+];
 
-    script.src = src;
-    script.onload = resolve;
-    script.onerror = reject;
+// ===== RUNS AS SOON AS THE PAGE LOADS =====
+renderAllPrices();
 
-    document.head.appendChild(script);
-  });
-}
-
-
-async function initializeFirebase() {
-
-  try {
-
-    await loadFirebaseScript(
-      "https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"
-    );
-
-    await loadFirebaseScript(
-      "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"
-    );
-
-    await loadFirebaseScript(
-      "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"
-    );
-
-    firebase.initializeApp(firebaseConfig);
-
-    window.auth = firebase.auth();
-    window.db = firebase.firestore();
-
-    startApplication();
-
-  } catch (error) {
-
-    console.error(error);
-
-    showNotification(
-      "Unable to load Firebase. Check your internet connection.",
-      "error"
-    );
-
+// Watches for login/logout changes automatically
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    // Look up this user's role from Firestore
+    const userDoc = await getDoc(doc(db, "users", user.uid));
+    const userData = userDoc.exists() ? userDoc.data() : { role: "buyer", name: user.email };
+    currentUserRole = userData.role;
+    showLoggedInView(userData.name || user.email, currentUserRole);
+  } else {
+    currentUserRole = null;
+    showLoggedOutView();
   }
-}
-
-
-/* =========================================================
-   GLOBAL STATE
-   ========================================================= */
-
-let currentUser = null;
-let currentUserData = null;
-
-let currentProduct = null;
-let currentSeller = null;
-
-let allProducts = [];
-
-let selectedCategory = "";
-let selectedSearch = "";
-let selectedLocation = "";
-
-
-/* =========================================================
-   DOM HELPERS
-   ========================================================= */
-
-function $(id) {
-  return document.getElementById(id);
-}
-
-
-function showElement(element) {
-
-  if (!element) return;
-
-  element.classList.remove("hidden");
-}
-
-
-function hideElement(element) {
-
-  if (!element) return;
-
-  element.classList.add("hidden");
-}
-
-
-/* =========================================================
-   NOTIFICATION
-   ========================================================= */
-
-function showNotification(message, type = "success") {
-
-  const notification = $("notification");
-
-  if (!notification) return;
-
-  notification.textContent = message;
-
-  notification.className =
-    "notification show " + type;
-
-  setTimeout(() => {
-
-    notification.classList.remove("show");
-
-  }, 4000);
-}
-
-
-/* =========================================================
-   APPLICATION START
-   ========================================================= */
-
-function startApplication() {
-
-  setCurrentYear();
-
-  setupMenu();
-
-  setupAuthTabs();
-
-  setupAuthentication();
-
-  setupBuyerControls();
-
-  setupSellerControls();
-
-  setupModals();
-
-  auth.onAuthStateChanged(async user => {
-
-    if (user) {
-
-      currentUser = user;
-
-      await loadUserAccount();
-
-    } else {
-
-      currentUser = null;
-      currentUserData = null;
-
-      showLoggedOutState();
-    }
-
-  });
-
-}
-
-
-/* =========================================================
-   CURRENT YEAR
-   ========================================================= */
-
-function setCurrentYear() {
-
-  if ($("currentYear")) {
-
-    $("currentYear").textContent =
-      new Date().getFullYear();
-
-  }
-
-}
-
-
-/* =========================================================
-   LOGGED OUT STATE
-   ========================================================= */
-
-function showLoggedOutState() {
-
-  showElement($("authSection"));
-
-  hideElement($("buyerDashboard"));
-
-  hideElement($("sellerDashboard"));
-
-}
-
-
-/* =========================================================
-   AUTH TABS
-   ========================================================= */
-
-function setupAuthTabs() {
-
-  const buyerTab = $("buyerTab");
-  const sellerTab = $("sellerTab");
-
-  const buyerAuth = $("buyerAuth");
-  const sellerAuth = $("sellerAuth");
-
-  buyerTab.addEventListener("click", () => {
-
+});
+
+// ===== UI SWITCHING: BUYER TAB / SELLER TAB =====
+function showRoleForm(role) {
+  const buyerForm = document.getElementById("buyerForm");
+  const sellerForm = document.getElementById("sellerForm");
+  const buyerTab = document.getElementById("buyerTab");
+  const sellerTab = document.getElementById("sellerTab");
+
+  if (role === "buyer") {
+    buyerForm.style.display = "block";
+    sellerForm.style.display = "none";
     buyerTab.classList.add("active");
     sellerTab.classList.remove("active");
-
-    showElement(buyerAuth);
-    hideElement(sellerAuth);
-
-  });
-
-
-  sellerTab.addEventListener("click", () => {
-
-    sellerTab.classList.add("active");
+  } else {
+    buyerForm.style.display = "none";
+    sellerForm.style.display = "block";
     buyerTab.classList.remove("active");
-
-    hideElement(buyerAuth);
-    showElement(sellerAuth);
-
-  });
-
+    sellerTab.classList.add("active");
+  }
 }
 
-
-/* =========================================================
-   AUTHENTICATION
-   ========================================================= */
-
-function setupAuthentication() {
-
-  $("buyerSignup").addEventListener(
-    "click",
-    registerBuyer
-  );
-
-  $("sellerSignup").addEventListener(
-    "click",
-    registerSeller
-  );
-
-  $("loginButton").addEventListener(
-    "click",
-    loginUser
-  );
-
-  $("forgotPassword").addEventListener(
-    "click",
-    resetPassword
-  );
-
-}
-
-
-/* =========================================================
-   BUYER REGISTRATION
-   ========================================================= */
-
-async function registerBuyer() {
-
-  const name =
-    $("buyerName").value.trim();
-
-  const email =
-    $("buyerEmail").value.trim();
-
-  const password =
-    $("buyerPassword").value;
-
+// ===== SIGN UP: BUYER =====
+async function signUpBuyer() {
+  const name = document.getElementById("buyerName").value.trim();
+  const email = document.getElementById("buyerEmail").value.trim();
+  const password = document.getElementById("buyerPassword").value;
+  const status = document.getElementById("authStatus");
 
   if (!name || !email || !password) {
-
-    showNotification(
-      "Please complete all buyer fields.",
-      "error"
-    );
-
+    status.innerHTML = "⚠️ Please fill in all fields.";
     return;
   }
-
-
-  if (password.length < 6) {
-
-    showNotification(
-      "Password must contain at least 6 characters.",
-      "error"
-    );
-
-    return;
-  }
-
 
   try {
-
-    setButtonLoading(
-      $("buyerSignup"),
-      true,
-      "Creating account..."
-    );
-
-
-    const credential =
-      await auth.createUserWithEmailAndPassword(
-        email,
-        password
-      );
-
-
-    await db
-      .collection("users")
-      .doc(credential.user.uid)
-      .set({
-
-        name: name,
-
-        email: email,
-
-        role: "buyer",
-
-        status: "approved",
-
-        location: "",
-
-        createdAt:
-          firebase.firestore.FieldValue.serverTimestamp(),
-
-        updatedAt:
-          firebase.firestore.FieldValue.serverTimestamp()
-
-      });
-
-
-    showNotification(
-      "Buyer account created successfully!",
-      "success"
-    );
-
-
+    const result = await createUserWithEmailAndPassword(auth, email, password);
+    await setDoc(doc(db, "users", result.user.uid), {
+      name: name,
+      email: email,
+      role: "buyer"
+    });
+    status.innerHTML = "✅ Account created! You're now logged in.";
   } catch (error) {
-
-    console.error(error);
-
-    handleFirebaseError(error);
-
-  } finally {
-
-    setButtonLoading(
-      $("buyerSignup"),
-      false,
-      "Sign Up as Buyer"
-    );
-
+    status.innerHTML = "❌ " + friendlyError(error);
   }
-
 }
 
+// ===== SIGN UP: SELLER (goes into "pending" until approved) =====
+async function signUpSeller() {
+  const name = document.getElementById("sellerName").value.trim();
+  const shop = document.getElementById("sellerShop").value.trim();
+  const market = document.getElementById("sellerMarket").value.trim();
+  const phone = document.getElementById("sellerPhone").value.trim();
+  const email = document.getElementById("sellerEmail").value.trim();
+  const password = document.getElementById("sellerPassword").value;
+  const status = document.getElementById("authStatus");
 
-/* =========================================================
-   SELLER REGISTRATION
-   ========================================================= */
-
-async function registerSeller() {
-
-  const name =
-    $("sellerName").value.trim();
-
-  const location =
-    $("sellerLocation").value.trim();
-
-  const phone =
-    $("sellerPhone").value.trim();
-
-  const email =
-    $("sellerEmail").value.trim();
-
-  const password =
-    $("sellerPassword").value;
-
-
-  if (
-    !name ||
-    !location ||
-    !phone ||
-    !email ||
-    !password
-  ) {
-
-    showNotification(
-      "Please complete all seller fields.",
-      "error"
-    );
-
+  if (!name || !shop || !market || !phone || !email || !password) {
+    status.innerHTML = "⚠️ Please fill in all fields.";
     return;
   }
-
-
-  if (password.length < 6) {
-
-    showNotification(
-      "Password must contain at least 6 characters.",
-      "error"
-    );
-
-    return;
-  }
-
 
   try {
-
-    setButtonLoading(
-      $("sellerSignup"),
-      true,
-      "Submitting application..."
-    );
-
-
-    const credential =
-      await auth.createUserWithEmailAndPassword(
-        email,
-        password
-      );
-
-
-    const uid =
-      credential.user.uid;
-
-
-    await db
-      .collection("users")
-      .doc(uid)
-      .set({
-
-        name: name,
-
-        email: email,
-
-        phone: phone,
-
-        location: location,
-
-        role: "seller",
-
-        status: "pending",
-
-        verified: false,
-
-        createdAt:
-          firebase.firestore.FieldValue.serverTimestamp(),
-
-        updatedAt:
-          firebase.firestore.FieldValue.serverTimestamp()
-
-      });
-
-
-    await db
-      .collection("sellerApplications")
-      .add({
-
-        userId: uid,
-
-        name: name,
-
-        email: email,
-
-        phone: phone,
-
-        location: location,
-
-        status: "pending",
-
-        submittedAt:
-          firebase.firestore.FieldValue.serverTimestamp()
-
-      });
-
-
-    showNotification(
-      "Seller application submitted. Your account is pending review.",
-      "success"
-    );
-
-
+    const result = await createUserWithEmailAndPassword(auth, email, password);
+    await setDoc(doc(db, "users", result.user.uid), {
+      name: name,
+      shopName: shop,
+      market: market,
+      phone: phone,
+      email: email,
+      role: "pending_seller"
+    });
+    status.innerHTML = "✅ Application submitted! Your account is pending review before you can add products.";
   } catch (error) {
-
-    console.error(error);
-
-    handleFirebaseError(error);
-
-  } finally {
-
-    setButtonLoading(
-      $("sellerSignup"),
-      false,
-      "Apply as Seller"
-    );
-
+    status.innerHTML = "❌ " + friendlyError(error);
   }
-
 }
 
-
-/* =========================================================
-   LOGIN
-   ========================================================= */
-
-async function loginUser() {
-
-  const email =
-    $("loginEmail").value.trim();
-
-  const password =
-    $("loginPassword").value;
-
-
-  if (!email || !password) {
-
-    showNotification(
-      "Enter your email and password.",
-      "error"
-    );
-
-    return;
+// ===== TOGGLE LOGIN BOX OPEN/CLOSED =====
+function toggleLoginBox() {
+  const box = document.getElementById("loginBox");
+  const link = document.getElementById("loginToggleLink");
+  if (box.style.display === "none") {
+    box.style.display = "block";
+    link.innerText = "Hide login";
+  } else {
+    box.style.display = "none";
+    link.innerText = "Already have an account? Log in";
   }
-
-
-  try {
-
-    setButtonLoading(
-      $("loginButton"),
-      true,
-      "Logging in..."
-    );
-
-
-    await auth.signInWithEmailAndPassword(
-      email,
-      password
-    );
-
-
-    showNotification(
-      "Welcome back!",
-      "success"
-    );
-
-
-  } catch (error) {
-
-    console.error(error);
-
-    handleFirebaseError(error);
-
-  } finally {
-
-    setButtonLoading(
-      $("loginButton"),
-      false,
-      "Log In"
-    );
-
-  }
-
 }
 
-
-/* =========================================================
-   FORGOT PASSWORD
-   ========================================================= */
-
+// ===== FORGOT PASSWORD =====
 async function resetPassword() {
-
-  const email =
-    $("loginEmail").value.trim();
-
+  const status = document.getElementById("authStatus");
+  const email = document.getElementById("loginEmail").value.trim();
 
   if (!email) {
-
-    showNotification(
-      "Enter your email address first.",
-      "error"
-    );
-
+    status.innerHTML = "⚠️ Please type your email above first, then tap 'Forgot password?' again.";
+    document.getElementById("loginBox").style.display = "block";
     return;
   }
 
-
   try {
-
-    await auth.sendPasswordResetEmail(email);
-
-    showNotification(
-      "Password reset email sent. Check your inbox.",
-      "success"
-    );
-
+    await sendPasswordResetEmail(auth, email);
+    status.innerHTML = "✅ Password reset email sent. Please check your inbox.";
   } catch (error) {
-
-    handleFirebaseError(error);
-
+    status.innerHTML = "❌ " + friendlyError(error);
   }
-
 }
 
-
-/* =========================================================
-   LOAD USER ACCOUNT
-   ========================================================= */
-
-async function loadUserAccount() {
-
-  try {
-
-    const snapshot =
-      await db
-        .collection("users")
-        .doc(currentUser.uid)
-        .get();
-
-
-    if (!snapshot.exists) {
-
-      await auth.signOut();
-
-      showNotification(
-        "Your account information could not be found.",
-        "error"
-      );
-
-      return;
-    }
-
-
-    currentUserData =
-      snapshot.data();
-
-
-    hideElement($("authSection"));
-
-
-    if (
-      currentUserData.role === "seller"
-    ) {
-
-      hideElement($("buyerDashboard"));
-
-      showElement($("sellerDashboard"));
-
-      await loadSellerDashboard();
-
-    } else {
-
-      hideElement($("sellerDashboard"));
-
-      showElement($("buyerDashboard"));
-
-      await loadBuyerDashboard();
-
-    }
-
-  } catch (error) {
-
-    console.error(error);
-
-    showNotification(
-      "Unable to load your account.",
-      "error"
-    );
-
-  }
-
-}
-
-
-/* =========================================================
-   BUYER DASHBOARD
-   ========================================================= */
-
-async function loadBuyerDashboard() {
-
-  const name =
-    currentUserData.name ||
-    currentUser.displayName ||
-    "Buyer";
-
-
-  $("buyerDisplayName").textContent =
-    name;
-
-
-  selectedLocation =
-    currentUserData.location || "";
-
-
-  $("locationInput").value =
-    selectedLocation;
-
-
-  await loadProducts();
-
-  await loadFollowing();
-
-}
-
-
-/* =========================================================
-   BUYER CONTROLS
-   ========================================================= */
-
-function setupBuyerControls() {
-
-  $("searchButton").addEventListener(
-    "click",
-    () => {
-
-      selectedSearch =
-        $("productSearch")
-          .value
-          .trim()
-          .toLowerCase();
-
-      renderProducts();
-
-    }
-  );
-
-
-  $("productSearch").addEventListener(
-    "keydown",
-    event => {
-
-      if (event.key === "Enter") {
-
-        selectedSearch =
-          $("productSearch")
-            .value
-            .trim()
-            .toLowerCase();
-
-        renderProducts();
-
-      }
-
-    }
-  );
-
-
-  $("categoryFilter").addEventListener(
-    "change",
-    event => {
-
-      selectedCategory =
-        event.target.value;
-
-      renderProducts();
-
-    }
-  );
-
-
-  $("priceFilter").addEventListener(
-    "change",
-    () => {
-
-      renderProducts();
-
-    }
-  );
-
-
-  document
-    .querySelectorAll(".category-button")
-    .forEach(button => {
-
-      button.addEventListener(
-        "click",
-        () => {
-
-          selectedCategory =
-            button.dataset.category || "";
-
-          $("categoryFilter").value =
-            selectedCategory;
-
-          renderProducts();
-
-          window.scrollTo({
-            top: 0,
-            behavior: "smooth"
-          });
-
-        }
-      );
-
-    });
-
-
-  $("saveLocation").addEventListener(
-    "click",
-    saveUserLocation
-  );
-
-
-  $("refreshProducts").addEventListener(
-    "click",
-    loadProducts
-  );
-
-
-  $("dashboardLogout").addEventListener(
-    "click",
-    logoutUser
-  );
-
-
-  $("openMessages").addEventListener(
-    "click",
-    () => {
-
-      showNotification(
-        "Messaging is ready for seller conversations.",
-        "success"
-      );
-
-    }
-  );
-
-}
-
-
-/* =========================================================
-   SAVE LOCATION
-   ========================================================= */
-
-async function saveUserLocation() {
-
-  const location =
-    $("locationInput")
-      .value
-      .trim();
-
-
-  if (!location) {
-
-    showNotification(
-      "Enter your location first.",
-      "error"
-    );
-
+// ===== LOG IN =====
+async function logIn() {
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value;
+  const status = document.getElementById("authStatus");
+
+  if (!email || !password) {
+    status.innerHTML = "⚠️ Please enter your email and password.";
     return;
   }
 
-
   try {
-
-    await db
-      .collection("users")
-      .doc(currentUser.uid)
-      .update({
-
-        location: location,
-
-        updatedAt:
-          firebase.firestore.FieldValue.serverTimestamp()
-
-      });
-
-
-    currentUserData.location =
-      location;
-
-    selectedLocation =
-      location;
-
-
-    showNotification(
-      "Location saved.",
-      "success"
-    );
-
-
-    await loadProducts();
-
+    await signInWithEmailAndPassword(auth, email, password);
+    status.innerHTML = "";
   } catch (error) {
-
-    console.error(error);
-
-    showNotification(
-      "Could not save your location.",
-      "error"
-    );
-
+    status.innerHTML = "❌ " + friendlyError(error);
   }
-
 }
 
+// ===== LOG OUT =====
+async function logOut() {
+  await signOut(auth);
+}
 
-/* =========================================================
-   LOAD PRODUCTS
-   ========================================================= */
+// ===== SHOW LOGGED-IN VIEW =====
+function showLoggedInView(name, role) {
+  document.getElementById("loggedOutView").style.display = "none";
+  document.getElementById("welcomeName").innerText = name;
 
-async function loadProducts() {
+  // Show account status (name, role, logout) inside the slide-out menu instead of on the main page
+  document.getElementById("menuAccountStatus").style.display = "block";
+  document.getElementById("accountMenuLink").style.display = "none";
 
-  const productList =
-    $("productList");
+  // Unlock the marketplace (search, categories, prices, about) now that they're logged in
+  document.getElementById("marketplaceContent").style.display = "block";
+  document.getElementById("aboutMenuLink").style.display = "block";
 
+  const roleStatus = document.getElementById("roleStatus");
+  const addPriceSection = document.getElementById("addPrice");
+  const addPriceNote = document.getElementById("addPriceNote");
+  const addPriceForm = document.getElementById("addPriceForm");
 
-  productList.innerHTML = `
-    <div class="loading-state">
-      <div class="spinner"></div>
-      <p>Loading products...</p>
-    </div>
-  `;
+  const addPriceMenuLink = document.getElementById("addPriceMenuLink");
 
+  if (role === "buyer") {
+    // Buyers never need to see the seller "Add Product" section at all
+    roleStatus.innerHTML = "You're signed in as a <strong>Buyer</strong>.";
+    addPriceSection.style.display = "none";
+    addPriceMenuLink.style.display = "none";
+  } else if (role === "pending_seller") {
+    roleStatus.innerHTML = "⏳ Your seller account is <strong>pending review</strong>. You'll be able to add products once approved.";
+    addPriceSection.style.display = "block";
+    addPriceMenuLink.style.display = "block";
+    addPriceNote.innerHTML = "Your seller account is still pending review.";
+    addPriceForm.style.display = "none";
+  } else if (role === "verified_seller") {
+    roleStatus.innerHTML = "✅ You're a <strong>Verified Seller</strong>. You can add products below.";
+    addPriceSection.style.display = "block";
+    addPriceMenuLink.style.display = "block";
+    addPriceNote.innerHTML = "";
+    addPriceForm.style.display = "block";
+  } else if (role === "admin") {
+    roleStatus.innerHTML = "🛠️ You're logged in as <strong>Admin</strong>.";
+    addPriceSection.style.display = "block";
+    addPriceMenuLink.style.display = "block";
+    addPriceNote.innerHTML = "";
+    addPriceForm.style.display = "block";
+  }
 
-  try {
+  // Show the admin panel link/section only for admins
+  const adminSection = document.getElementById("adminSection");
+  const adminMenuLink = document.getElementById("adminMenuLink");
+  if (role === "admin") {
+    adminSection.style.display = "block";
+    adminMenuLink.style.display = "block";
+    loadPendingSellers();
+  } else {
+    adminSection.style.display = "none";
+    adminMenuLink.style.display = "none";
+  }
+}
 
-    const snapshot =
-      await db
-        .collection("products")
-        .orderBy("createdAt", "desc")
-        .limit(100)
-        .get();
+// ===== SHOW LOGGED-OUT VIEW =====
+function showLoggedOutView() {
+  document.getElementById("loggedOutView").style.display = "block";
+  document.getElementById("menuAccountStatus").style.display = "none";
+  document.getElementById("accountMenuLink").style.display = "block";
+  document.getElementById("addPrice").style.display = "none";
+  document.getElementById("adminSection").style.display = "none";
+  document.getElementById("adminMenuLink").style.display = "none";
+  document.getElementById("marketplaceContent").style.display = "none";
+  document.getElementById("aboutMenuLink").style.display = "none";
+  document.getElementById("addPriceMenuLink").style.display = "none";
+}
 
+// ===== ADMIN: LOAD ALL PENDING SELLERS =====
+async function loadPendingSellers() {
+  const listDiv = document.getElementById("pendingSellersList");
+  listDiv.innerHTML = "Loading...";
 
-    allProducts =
-      snapshot.docs.map(doc => ({
+  const usersRef = collection(db, "users");
+  const q = query(usersRef, where("role", "==", "pending_seller"));
+  const snapshot = await getDocs(q);
 
-        id: doc.id,
+  if (snapshot.empty) {
+    listDiv.innerHTML = "<p>No pending sellers right now. 🎉</p>";
+    return;
+  }
 
-        ...doc.data()
-
-      }));
-
-
-    renderProducts();
-
-
-  } catch (error) {
-
-    console.error(error);
-
-    productList.innerHTML = `
-      <div class="empty-state">
-        <div>⚠️</div>
-        <h3>Unable to load products</h3>
-        <p>Please try again.</p>
+  let html = "";
+  snapshot.forEach((docSnap) => {
+    const u = docSnap.data();
+    const id = docSnap.id;
+    html += `
+      <div class="pending-card">
+        <p><strong>${u.name}</strong></p>
+        <p>🏪 ${u.shopName} — ${u.market}</p>
+        <p>📞 ${u.phone}</p>
+        <p>✉️ ${u.email}</p>
+        <button onclick="approveSeller('${id}')" class="approve-btn">✅ Approve</button>
+        <button onclick="rejectSeller('${id}')" class="reject-btn">❌ Reject</button>
       </div>
     `;
-
-  }
-
+  });
+  listDiv.innerHTML = html;
 }
 
+// ===== ADMIN: APPROVE A SELLER =====
+async function approveSeller(userId) {
+  await updateDoc(doc(db, "users", userId), { role: "verified_seller" });
+  loadPendingSellers();
+}
 
-/* =========================================================
-   RENDER PRODUCTS
-   ========================================================= */
+// ===== ADMIN: REJECT A SELLER (sends them back to plain buyer) =====
+async function rejectSeller(userId) {
+  await updateDoc(doc(db, "users", userId), { role: "buyer" });
+  loadPendingSellers();
+}
 
-function renderProducts() {
+// ===== MENU TOGGLE =====
+function toggleMenu() {
+  document.getElementById("sideMenu").classList.toggle("open");
+  document.getElementById("overlay").classList.toggle("show");
+}
 
-  const productList =
-    $("productList");
+// ===== SEARCH FOR A PRICE =====
+function searchPrice() {
+  const input = document.getElementById("searchBox").value.toLowerCase().trim();
+  const resultDiv = document.getElementById("result");
 
-
-  let products =
-    [...allProducts];
-
-
-  if (selectedSearch) {
-
-    products =
-      products.filter(product => {
-
-        const name =
-          String(product.name || "")
-            .toLowerCase();
-
-        const description =
-          String(product.description || "")
-            .toLowerCase();
-
-        const location =
-          String(product.location || "")
-            .toLowerCase();
-
-
-        return (
-          name.includes(selectedSearch) ||
-          description.includes(selectedSearch) ||
-          location.includes(selectedSearch)
-        );
-
-      });
-
-  }
-
-
-  if (selectedCategory) {
-
-    products =
-      products.filter(product =>
-
-        String(product.category || "")
-          .toLowerCase() ===
-        selectedCategory.toLowerCase()
-
-      );
-
-  }
-
-
-  const priceFilter =
-    $("priceFilter").value;
-
-
-  if (priceFilter === "low") {
-
-    products.sort(
-      (a, b) =>
-        Number(a.price || 0) -
-        Number(b.price || 0)
-    );
-
-  }
-
-
-  if (priceFilter === "high") {
-
-    products.sort(
-      (a, b) =>
-        Number(b.price || 0) -
-        Number(a.price || 0)
-    );
-
-  }
-
-
-  if (!products.length) {
-
-    productList.innerHTML = `
-      <div class="empty-state">
-
-        <div>🔎</div>
-
-        <h3>No products found</h3>
-
-        <p>
-          Try another search, category or location.
-        </p>
-
-      </div>
-    `;
-
+  if (input === "") {
+    resultDiv.innerHTML = "Please type an item to search.";
     return;
-
   }
 
+  const matches = prices.filter(p => p.item.toLowerCase().includes(input));
 
-  productList.innerHTML =
-    products
-      .map(createProductCard)
-      .join("");
-
-
-  document
-    .querySelectorAll(".product-card")
-    .forEach(card => {
-
-      card.addEventListener(
-        "click",
-        () => {
-
-          const id =
-            card.dataset.id;
-
-          const product =
-            allProducts.find(
-              item => item.id === id
-            );
-
-          if (product) {
-
-            openProduct(product);
-
-          }
-
-        }
-      );
-
-    });
-
+  if (matches.length > 0) {
+    resultDiv.innerHTML = matches
+      .map(p => `${capitalize(p.item)}: ${p.price} (${p.location})`)
+      .join("<br>");
+  } else {
+    resultDiv.innerHTML = `No results for "${input}" yet.`;
+  }
 }
 
+// ===== ADD A NEW PRICE (only reachable by verified sellers, UI-gated) =====
+function addPrice() {
+  const item = document.getElementById("itemName").value.trim();
+  const price = document.getElementById("itemPrice").value.trim();
+  const location = document.getElementById("itemLocation").value.trim();
+  const status = document.getElementById("addStatus");
 
-/* =========================================================
-   PRODUCT CARD
-   ========================================================= */
+  if (currentUserRole !== "verified_seller") {
+    status.innerHTML = "⚠️ Only verified sellers can add prices.";
+    return;
+  }
 
-function createProductCard(product) {
+  if (item === "" || price === "" || location === "") {
+    status.innerHTML = "⚠️ Please fill in all three fields.";
+    return;
+  }
 
-  const price =
-    Number(product.price || 0);
+  prices.push({ item: item, price: price, location: location });
+  status.innerHTML = "✅ Price added! Thank you.";
 
+  document.getElementById("itemName").value = "";
+  document.getElementById("itemPrice").value = "";
+  document.getElementById("itemLocation").value = "";
 
-  const image =
-    product.imageUrl ||
-    "https://via.placeholder.com/600x400?text=NaijaPrice";
-
-
-  const verified =
-    product.sellerVerified !== false;
-
-
-  return `
-
-    <article
-      class="product-card"
-      data-id="${escapeHTML(product.id)}"
-    >
-
-      <div class="product-image-wrapper">
-
-        <img
-          class="product-image"
-          src="${escapeHTML(image)}"
-          alt="${escapeHTML(product.name || "Product")}"
-          loading="lazy"
-          onerror="this.src='https://via.placeholder.com/600x400?text=NaijaPrice'"
-        >
-
-      </div>
-
-
-      <div class="product-info">
-
-        <span class="product-category">
-          ${escapeHTML(
-            product.category || "Other"
-          )}
-        </span>
-
-        <h3>
-          ${escapeHTML(
-            product.name || "Unnamed Product"
-          )}
-        </h3>
-
-        <div class="product-price">
-          ₦${price.toLocaleString("en-NG")}
-        </div>
-
-        <p class="product-location">
-          📍 ${escapeHTML(
-            product.location || "Location not provided"
-          )}
-        </p>
-
-        <div class="seller-line">
-
-          <span>
-            🏪 ${escapeHTML(
-              product.sellerName || "Seller"
-            )}
-          </span>
-
-          ${
-            verified
-              ? `<span class="verified-badge">✓ Verified</span>`
-              : ""
-          }
-
-        </div>
-
-      </div>
-
-    </article>
-
-  `;
-
+  renderAllPrices();
 }
 
+// ===== SHOW ALL PRICES =====
+function renderAllPrices() {
+  const container = document.getElementById("allPrices");
+  container.innerHTML = prices
+    .map(p => `<div class="price-item"><strong>${capitalize(p.item)}</strong> — ${p.price} <br><small>${p.location}</small></div>`)
+    .join("");
+}
 
-/* =========================================================
-   PRODUCT DETAILS
-   ========================================================= */
+function capitalize(word) {
+  return word.charAt(0).toUpperCase() + word.slice(1);
+}
 
-async function openProduct(product) {
+// Turns technical Firebase error codes into plain, human messages
+function friendlyError(error) {
+  const code = error.code || "";
+  if (code.includes("email-already-in-use")) {
+    return "This email is already registered. Please log in instead.";
+  }
+  if (code.includes("invalid-credential") || code.includes("wrong-password") || code.includes("user-not-found")) {
+    return "Incorrect email or password. Please try again.";
+  }
+  if (code.includes("weak-password")) {
+    return "Please choose a password with at least 6 characters.";
+  }
+  if (code.includes("invalid-email")) {
+    return "Please enter a valid email address.";
+  }
+  if (code.includes("network-request-failed")) {
+    return "Network error. Please check your connection and try again.";
+  }
+  if (code.includes("too-many-requests")) {
+    return "Too many attempts. Please wait a moment and try again.";
+  }
+  return "Something went wrong. Please try again.";
+}
 
-  currentProduct =
-    product;
-
-
-  const modal =
-    $("productModal");
-
-  const details =
-    $("productDetails");
-
-
-  const price =
-    Number(product.price || 0);
-
-
-  details.innerHTML = `
-
-    <img
-      class="modal-product-image"
-      src="${escapeHTML(
-        product.imageUrl ||
-        "https://via.placeholder.com/700x500?text=NaijaPrice"
-      )}"
-      alt="${escapeHTML(product.name || "Product")}"
-    >
-
-    <span class="product-category">
-      ${escapeHTML(product.category || 
+// Make these functions callable from onclick="" in the HTML
+// (needed because this file is a "module", which doesn't expose functions globally by default)
+window.showRoleForm = showRoleForm;
+window.signUpBuyer = signUpBuyer;
+window.signUpSeller = signUpSeller;
+window.logIn = logIn;
+window.logOut = logOut;
+window.toggleMenu = toggleMenu;
+window.searchPrice = searchPrice;
+window.addPrice = addPrice;
+window.approveSeller = approveSeller;
+window.rejectSeller = rejectSeller;
+window.toggleLoginBox = toggleLoginBox;
+window.resetPassword = resetPassword;
+       
