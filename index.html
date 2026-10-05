@@ -2,883 +2,171 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
-
-  <meta
-    name="description"
-    content="NaijaPrice helps Nigerians check local market prices before they buy."
-  >
-
-  <title>NaijaPrice — Check Local Prices Before You Buy</title>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NaijaPrice - Local Market Price Checker</title>
   <link rel="stylesheet" href="styles.css">
 </head>
-
 <body>
 
-  <!-- ================= HEADER ================= -->
+  <!-- Slide-out menu -->
+  <div id="sideMenu" class="side-menu">
+    <button class="close-menu" onclick="toggleMenu()">✕</button>
 
-  <header class="site-header">
-
-    <div class="top-bar">
-
-      <button
-        id="menuButton"
-        class="menu-button"
-        aria-label="Open menu"
-        type="button"
-      >
-        ☰
-      </button>
-
+    <!-- Shown in the menu once logged in: name, role, logout -->
+    <div id="menuAccountStatus" style="display:none;">
+      <p class="menu-welcome">👤 <span id="welcomeName"></span></p>
+      <p id="roleStatus" class="menu-role-status"></p>
+      <button onclick="logOut()" class="secondary-btn menu-logout-btn">Log Out</button>
+      <hr>
     </div>
 
-    <div class="brand">
+    <a href="#home">🏠 Home</a>
+    <a href="#account" id="accountMenuLink">👤 Account</a>
+    <a href="#admin" id="adminMenuLink" style="display:none;">🛠️ Admin Panel</a>
+    <a href="#addPrice" id="addPriceMenuLink" style="display:none;">➕ Add Product</a>
+    <a href="#about" id="aboutMenuLink" style="display:none;">ℹ️ About</a>
+    <a href="#contact">📞 Contact</a>
+  </div>
+  <div id="overlay" class="overlay" onclick="toggleMenu()"></div>
 
-      <div class="brand-logo">
-        🛒
-      </div>
-
-      <h1>
-        Naija<span>Price</span>
-      </h1>
-
-      <p>
-        Check local market prices before you buy
-      </p>
-
-      <small>
-        By Ikechi Emmanuel
-      </small>
-
+  <header id="home">
+    <div class="header-top-row">
+      <button class="menu-btn" onclick="toggleMenu()">☰</button>
     </div>
-
+    <div class="logo">
+      <span class="logo-icon">🛒</span>
+      <span class="logo-text">Naija<span class="logo-accent">Price</span></span>
+    </div>
+    <p class="tagline">Check local market prices before you buy</p>
+    <p class="tagline small">By Ikechi Emmanuel</p>
   </header>
-
-
-  <!-- ================= SIDE MENU ================= -->
-
-  <aside id="sideMenu" class="side-menu">
-
-    <button
-      id="closeMenu"
-      class="close-menu"
-      type="button"
-    >
-      ✕
-    </button>
-
-    <h2>NaijaPrice</h2>
-
-    <nav>
-
-      <a href="#" data-section="home">
-        🏠 Home
-      </a>
-
-      <a href="#" data-section="products">
-        🛍️ Products
-      </a>
-
-      <a href="#" data-section="following">
-        ❤️ Following
-      </a>
-
-      <a href="#" data-section="messages">
-        💬 Messages
-      </a>
-
-      <a href="#" data-section="profile">
-        👤 My Account
-      </a>
-
-      <a href="#" data-section="settings">
-        ⚙️ Settings
-      </a>
-
-    </nav>
-
-    <button
-      id="menuLogout"
-      class="logout-button"
-      type="button"
-    >
-      Log Out
-    </button>
-
-  </aside>
-
-
-  <div id="menuOverlay" class="menu-overlay"></div>
-
-
-  <!-- ================= MAIN ================= -->
 
   <main>
 
-    <!-- =========================================
-         AUTHENTICATION
-    ========================================== -->
+    <!-- ACCOUNT SECTION: sign up / log in / logged-in status -->
+    <section class="account-section" id="account">
 
-    <section
-      id="authSection"
-      class="card auth-card"
-    >
+      <!-- Shown when nobody is logged in -->
+      <div id="loggedOutView">
+        <h2>👤 Account</h2>
 
-      <div class="account-icon">
-        👤
-      </div>
-
-      <h2>Welcome to NaijaPrice</h2>
-
-      <p class="subtitle">
-        Buy smarter. Know the price before you buy.
-      </p>
-
-
-      <!-- ACCOUNT TYPE -->
-
-      <div class="account-tabs">
-
-        <button
-          id="buyerTab"
-          class="account-tab active"
-          type="button"
-        >
-          I'm a Buyer
-        </button>
-
-        <button
-          id="sellerTab"
-          class="account-tab"
-          type="button"
-        >
-          I'm a Seller
-        </button>
-
-      </div>
-
-
-      <!-- ================= BUYER AUTH ================= -->
-
-      <div id="buyerAuth">
-
-        <p class="auth-description">
-          Create a free buyer account and start exploring products.
-        </p>
-
-        <input
-          id="buyerName"
-          type="text"
-          placeholder="Your name"
-          autocomplete="name"
-        >
-
-        <input
-          id="buyerEmail"
-          type="email"
-          placeholder="Email address"
-          autocomplete="email"
-        >
-
-        <input
-          id="buyerPassword"
-          type="password"
-          placeholder="Password (min 6 characters)"
-          autocomplete="new-password"
-        >
-
-        <button
-          id="buyerSignup"
-          class="primary-button"
-          type="button"
-        >
-          Sign Up as Buyer
-        </button>
-
-        <div class="divider">
-          <span>Already have an account?</span>
+        <div class="role-tabs">
+          <button id="buyerTab" class="role-tab active" onclick="showRoleForm('buyer')">I'm a Buyer</button>
+          <button id="sellerTab" class="role-tab" onclick="showRoleForm('seller')">I'm a Seller</button>
         </div>
 
-        <input
-          id="loginEmail"
-          type="email"
-          placeholder="Email address"
-          autocomplete="email"
-        >
+        <!-- Buyer sign up (simple) -->
+        <div id="buyerForm" class="role-form">
+          <p class="form-note">Buyers can search and view prices for free.</p>
+          <input type="text" id="buyerName" placeholder="Your name">
+          <input type="email" id="buyerEmail" placeholder="Email address">
+          <input type="password" id="buyerPassword" placeholder="Password (min 6 characters)">
+          <button onclick="signUpBuyer()">Sign Up as Buyer</button>
+        </div>
 
-        <input
-          id="loginPassword"
-          type="password"
-          placeholder="Password"
-          autocomplete="current-password"
-        >
+        <!-- Seller sign up (needs proof) -->
+        <div id="sellerForm" class="role-form" style="display:none;">
+          <p class="form-note">⚠️ Seller accounts are reviewed before you can add prices. Please provide real details.</p>
+          <input type="text" id="sellerName" placeholder="Your full name">
+          <input type="text" id="sellerShop" placeholder="Shop / stall name">
+          <input type="text" id="sellerMarket" placeholder="Market & location (e.g. Yaba Market, Lagos)">
+          <input type="tel" id="sellerPhone" placeholder="Phone number">
+          <input type="email" id="sellerEmail" placeholder="Email address">
+          <input type="password" id="sellerPassword" placeholder="Password (min 6 characters)">
+          <button onclick="signUpSeller()">Apply as Seller</button>
+        </div>
 
-        <button
-          id="loginButton"
-          class="dark-button"
-          type="button"
-        >
-          Log In
-        </button>
+        <a href="#" class="text-link" id="loginToggleLink" onclick="toggleLoginBox(); return false;">Already have an account? Log in</a>
 
-        <button
-          id="forgotPassword"
-          class="link-button"
-          type="button"
-        >
-          Forgot password?
-        </button>
+        <div id="loginBox" style="display:none;">
+          <input type="email" id="loginEmail" placeholder="Email address">
+          <input type="password" id="loginPassword" placeholder="Password">
+          <button onclick="logIn()" class="secondary-btn">Log In</button>
+        </div>
 
+        <a href="#" class="text-link" onclick="resetPassword(); return false;">Forgot password?</a>
+
+        <p id="authStatus"></p>
       </div>
-
-
-      <!-- ================= SELLER AUTH ================= -->
-
-      <div
-        id="sellerAuth"
-        class="hidden"
-      >
-
-        <p class="auth-description">
-          Seller accounts require verification before products can be published.
-        </p>
-
-        <input
-          id="sellerName"
-          type="text"
-          placeholder="Full name / business name"
-        >
-
-        <input
-          id="sellerLocation"
-          type="text"
-          placeholder="Market & location (e.g. Yaba Market, Lagos)"
-        >
-
-        <input
-          id="sellerPhone"
-          type="tel"
-          placeholder="Phone number"
-        >
-
-        <input
-          id="sellerEmail"
-          type="email"
-          placeholder="Email address"
-        >
-
-        <input
-          id="sellerPassword"
-          type="password"
-          placeholder="Password (min 6 characters)"
-        >
-
-        <button
-          id="sellerSignup"
-          class="primary-button"
-          type="button"
-        >
-          Apply as Seller
-        </button>
-
-      </div>
-
-
-      <!-- AUTH MESSAGE -->
-
-      <div
-        id="authMessage"
-        class="message"
-        role="alert"
-      ></div>
 
     </section>
 
+    <!-- ADMIN PANEL: only visible when logged in as admin -->
+    <section class="admin-section" id="adminSection" style="display:none;">
+      <h2>🛠️ Admin Panel — Pending Sellers</h2>
+      <div id="pendingSellersList"></div>
+    </section>
 
-    <!-- =========================================
-         BUYER DASHBOARD
-    ========================================== -->
+    <!-- MARKETPLACE CONTENT: only visible once someone is logged in -->
+    <div id="marketplaceContent" style="display:none;">
 
-    <section
-      id="buyerDashboard"
-      class="hidden"
-    >
+      <section class="search-section">
+        <p class="location-line">📍 All Nigeria ▾ <span class="location-note">(location filter coming soon)</span></p>
+        <input type="text" id="searchBox" placeholder="Search an item (e.g. garri, beans, fuel)">
+        <button onclick="searchPrice()">Search</button>
+        <div id="result"></div>
+      </section>
 
-      <!-- USER WELCOME -->
-
-      <div class="card welcome-card">
-
-        <div>
-
-          <h2>
-            👋 Welcome,
-            <span id="buyerDisplayName">
-              Buyer
-            </span>
-          </h2>
-
-          <p>
-            Find products and compare prices from sellers around you.
-          </p>
-
-        </div>
-
-        <button
-          id="dashboardLogout"
-          class="dark-button"
-          type="button"
-        >
-          Log Out
-        </button>
-
-      </div>
-
-
-      <!-- LOCATION -->
-
-      <div class="card">
-
-        <h2>📍 Your Location</h2>
-
-        <p class="muted">
-          Choose your location to see nearby sellers and products.
-        </p>
-
-        <input
-          id="locationInput"
-          type="text"
-          placeholder="Enter your city, area or market"
-        >
-
-        <button
-          id="saveLocation"
-          class="primary-button"
-          type="button"
-        >
-          Save Location
-        </button>
-
-      </div>
-
-
-      <!-- SEARCH -->
-
-      <div class="card search-card">
-
-        <input
-          id="productSearch"
-          type="search"
-          placeholder="Search products (e.g. rice, phone, generator)"
-        >
-
-        <button
-          id="searchButton"
-          class="primary-button"
-          type="button"
-        >
-          🔍 Search
-        </button>
-
-      </div>
-
-
-      <!-- FILTERS -->
-
-      <div class="card">
-
-        <h2>Filter Products</h2>
-
-        <div class="filter-row">
-
-          <select id="categoryFilter">
-
-            <option value="">
-              All Categories
-            </option>
-
-            <option value="food">
-              🍚 Food
-            </option>
-
-            <option value="electronics">
-              📱 Electronics
-            </option>
-
-            <option value="building">
-              🧱 Building
-            </option>
-
-            <option value="fuel">
-              ⛽ Fuel
-            </option>
-
-            <option value="transport">
-              🚌 Transport
-            </option>
-
-            <option value="fashion">
-              👕 Fashion
-            </option>
-
-            <option value="other">
-              📦 Other
-            </option>
-
-          </select>
-
-
-          <select id="priceFilter">
-
-            <option value="">
-              Any Price
-            </option>
-
-            <option value="low">
-              Lowest Price
-            </option>
-
-            <option value="high">
-              Highest Price
-            </option>
-
-          </select>
-
-        </div>
-
-      </div>
-
-
-      <!-- CATEGORIES -->
-
-      <div class="card">
-
+      <section class="categories-section">
         <h2>📂 Categories</h2>
-
         <div class="category-grid">
-
-          <button
-            class="category-button"
-            data-category="food"
-            type="button"
-          >
-            🍚
-            <span>Food</span>
-          </button>
-
-          <button
-            class="category-button"
-            data-category="fuel"
-            type="button"
-          >
-            ⛽
-            <span>Fuel</span>
-          </button>
-
-          <button
-            class="category-button"
-            data-category="transport"
-            type="button"
-          >
-            🚌
-            <span>Transport</span>
-          </button>
-
-          <button
-            class="category-button"
-            data-category="building"
-            type="button"
-          >
-            🧱
-            <span>Building</span>
-          </button>
-
-          <button
-            class="category-button"
-            data-category="electronics"
-            type="button"
-          >
-            📱
-            <span>Electronics</span>
-          </button>
-
-          <button
-            class="category-button"
-            data-category=""
-            type="button"
-          >
-            📦
-            <span>All Items</span>
-          </button>
-
-        </div>
-
-      </div>
-
-
-      <!-- PRODUCT FEED -->
-
-      <div class="card">
-
-        <div class="section-heading">
-
-          <h2>🛍️ Products Near You</h2>
-
-          <button
-            id="refreshProducts"
-            class="small-button"
-            type="button"
-          >
-            ↻ Refresh
-          </button>
-
-        </div>
-
-        <div
-          id="productList"
-          class="product-list"
-        >
-
-          <div class="empty-state">
-
-            <div>
-              🛒
-            </div>
-
-            <h3>No products yet</h3>
-
-            <p>
-              Products from verified sellers will appear here.
-            </p>
-
+          <div class="category-card" data-category="food">
+            <span class="cat-icon">🌾</span>
+            <span class="cat-name">Food</span>
           </div>
-
+          <div class="category-card" data-category="fuel">
+            <span class="cat-icon">⛽</span>
+            <span class="cat-name">Fuel</span>
+          </div>
+          <div class="category-card" data-category="transport">
+            <span class="cat-icon">🚌</span>
+            <span class="cat-name">Transport</span>
+          </div>
+          <div class="category-card" data-category="building">
+            <span class="cat-icon">🧱</span>
+            <span class="cat-name">Building</span>
+          </div>
+          <div class="category-card" data-category="electronics">
+            <span class="cat-icon">📱</span>
+            <span class="cat-name">Electronics</span>
+          </div>
+          <div class="category-card" data-category="all">
+            <span class="cat-icon">🗂️</span>
+            <span class="cat-name">All Items</span>
+          </div>
         </div>
+      </section>
 
-      </div>
-
-
-      <!-- FOLLOWING -->
-
-      <div class="card">
-
-        <div class="section-heading">
-
-          <h2>❤️ Sellers You Follow</h2>
-
+      <section class="add-section" id="addPrice" style="display:none;">
+        <h2 id="addPriceHeading">➕ Add Product</h2>
+        <p id="addPriceNote"></p>
+        <div id="addPriceForm" style="display:none;">
+          <input type="text" id="itemName" placeholder="Item name (e.g. garri)">
+          <input type="text" id="itemPrice" placeholder="Price (e.g. ₦2,000)">
+          <input type="text" id="itemLocation" placeholder="Location (e.g. Yaba Market)">
+          <button onclick="addPrice()">Add Product</button>
         </div>
-
-        <div
-          id="followingList"
-          class="following-list"
-        >
-
-          <p class="muted">
-            Sellers you follow will appear here.
-          </p>
-
-        </div>
-
-      </div>
-
-
-      <!-- MESSAGES -->
-
-      <div class="card">
-
-        <div class="section-heading">
-
-          <h2>💬 Messages</h2>
-
-          <button
-            id="openMessages"
-            class="small-button"
-            type="button"
-          >
-            Open
-          </button>
-
-        </div>
-
-        <div id="messagePreview">
-
-          <p class="muted">
-            Your conversations with sellers will appear here.
-          </p>
-
-        </div>
-
-      </div>
-
-    </section>
-
-
-    <!-- =========================================
-         SELLER DASHBOARD
-    ========================================== -->
-
-    <section
-      id="sellerDashboard"
-      class="hidden"
-    >
-
-      <div class="card welcome-card">
-
-        <div>
-
-          <h2>
-            🏪 Welcome,
-            <span id="sellerDisplayName">
-              Seller
-            </span>
-          </h2>
-
-          <p id="sellerStatus">
-            Checking seller verification...
-          </p>
-
-        </div>
-
-        <button
-          id="sellerLogout"
-          class="dark-button"
-          type="button"
-        >
-          Log Out
-        </button>
-
-      </div>
-
-
-      <!-- SELLER STATUS -->
-
-      <div
-        id="sellerVerificationCard"
-        class="card"
-      >
-
-        <h2>🛡️ Seller Verification</h2>
-
-        <p id="verificationText">
-          Your seller account status will appear here.
-        </p>
-
-      </div>
-
-
-      <!-- ADD PRODUCT -->
-
-      <div
-        id="addProductCard"
-        class="card hidden"
-      >
-
-        <h2>➕ Add Product</h2>
-
-        <p class="muted">
-          Add products for buyers to discover.
-        </p>
-
-        <input
-          id="productName"
-          type="text"
-          placeholder="Product name"
-        >
-
-        <input
-          id="productPrice"
-          type="number"
-          min="0"
-          placeholder="Price in ₦"
-        >
-
-        <select id="productCategory">
-
-          <option value="">
-            Select category
-          </option>
-
-          <option value="food">
-            Food
-          </option>
-
-          <option value="electronics">
-            Electronics
-          </option>
-
-          <option value="building">
-            Building
-          </option>
-
-          <option value="fuel">
-            Fuel
-          </option>
-
-          <option value="transport">
-            Transport
-          </option>
-
-          <option value="fashion">
-            Fashion
-          </option>
-
-          <option value="other">
-            Other
-          </option>
-
-        </select>
-
-        <input
-          id="productLocation"
-          type="text"
-          placeholder="Product location"
-        >
-
-        <textarea
-          id="productDescription"
-          placeholder="Describe your product"
-          rows="4"
-        ></textarea>
-
-        <input
-          id="productImage"
-          type="url"
-          placeholder="Product image URL"
-        >
-
-        <button
-          id="addProductButton"
-          class="primary-button"
-          type="button"
-        >
-          Publish Product
-        </button>
-
-      </div>
-
-
-      <!-- SELLER PRODUCTS -->
-
-      <div class="card">
-
-        <h2>📦 My Products</h2>
-
-        <div id="sellerProducts">
-
-          <p class="muted">
-            Your products will appear here.
-          </p>
-
-        </div>
-
-      </div>
-
-    </section>
-
-
-    <!-- =========================================
-         PRODUCT DETAILS MODAL
-    ========================================== -->
-
-    <div
-      id="productModal"
-      class="modal hidden"
-    >
-
-      <div class="modal-content">
-
-        <button
-          id="closeProductModal"
-          class="modal-close"
-          type="button"
-        >
-          ✕
-        </button>
-
-        <div id="productDetails"></div>
-
-      </div>
+        <p id="addStatus"></p>
+      </section>
+
+      <section class="list-section">
+        <h2>📋 All Reported Prices</h2>
+        <div id="allPrices"></div>
+      </section>
+
+      <section class="about-section" id="about">
+        <h2>ℹ️ About NaijaPrice</h2>
+        <p>NaijaPrice helps Nigerians check local market prices before they buy, so no one overpays. Only verified sellers can add prices, so the data you see can be trusted.</p>
+      </section>
 
     </div>
-
-
-    <!-- =========================================
-         MESSAGE MODAL
-    ========================================== -->
-
-    <div
-      id="messageModal"
-      class="modal hidden"
-    >
-
-      <div class="modal-content">
-
-        <button
-          id="closeMessageModal"
-          class="modal-close"
-          type="button"
-        >
-          ✕
-        </button>
-
-        <h2>💬 Message Seller</h2>
-
-        <p id="messageSellerName"></p>
-
-        <textarea
-          id="messageText"
-          rows="6"
-          placeholder="Write your message..."
-        ></textarea>
-
-        <button
-          id="sendMessageButton"
-          class="primary-button"
-          type="button"
-        >
-          Send Message
-        </button>
-
-      </div>
-
-    </div>
-
-
-    <!-- =========================================
-         NOTIFICATION
-    ========================================== -->
-
-    <div
-      id="notification"
-      class="notification"
-      role="status"
-    ></div>
-
   </main>
 
-
-  <!-- ================= FOOTER ================= -->
-
-  <footer>
-
-    <p>
-      © <span id="currentYear"></span> NaijaPrice
-    </p>
-
-    <p>
-      Check local market prices before you buy.
-    </p>
-
+  <footer id="contact">
+    <p>Built by Ikechi Emmanuel 🇳🇬</p>
   </footer>
 
-
-  <!-- ================= JAVASCRIPT ================= -->
-
-  <script src="app.js"></script>
-
+  <script type="module" src="app.js"></script>
 </body>
-  </html>
+      </html>
+      
