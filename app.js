@@ -415,4 +415,4 @@ window.approveSeller = approveSeller;
 window.rejectSeller = rejectSeller;
 window.toggleLoginBox = toggleLoginBox;
 window.resetPassword = resetPassword;
-       
+  
