@@ -222,11 +222,15 @@ function showLoggedInView(name, role) {
     addPriceSection.style.display = "none";
     addPriceMenuLink.style.display = "none";
   } else if (role === "pending_seller") {
-    roleStatus.innerHTML = "⏳ Your seller account is <strong>pending review</strong>. You'll be able to add products once approved.";
+    roleStatus.innerHTML = "⏳ Your seller account is <strong>still under review</strong>. Check back soon — you'll see a status update here once it's decided.";
     addPriceSection.style.display = "block";
     addPriceMenuLink.style.display = "block";
     addPriceNote.innerHTML = "Your seller account is still pending review.";
     addPriceForm.style.display = "none";
+  } else if (role === "rejected") {
+    roleStatus.innerHTML = "😔 Your seller application was <strong>not approved</strong> this time. You can still use NaijaPrice as a buyer, or contact us to ask about your application.";
+    addPriceSection.style.display = "none";
+    addPriceMenuLink.style.display = "none";
   } else if (role === "verified_seller") {
     roleStatus.innerHTML = "✅ You're a <strong>Verified Seller</strong>. You can add products below.";
     addPriceSection.style.display = "block";
@@ -305,9 +309,9 @@ async function approveSeller(userId) {
   loadPendingSellers();
 }
 
-// ===== ADMIN: REJECT A SELLER (sends them back to plain buyer) =====
+// ===== ADMIN: REJECT A SELLER (keeps a record of the rejection, doesn't silently become "buyer") =====
 async function rejectSeller(userId) {
-  await updateDoc(doc(db, "users", userId), { role: "buyer" });
+  await updateDoc(doc(db, "users", userId), { role: "rejected" });
   loadPendingSellers();
 }
 
@@ -415,4 +419,3 @@ window.approveSeller = approveSeller;
 window.rejectSeller = rejectSeller;
 window.toggleLoginBox = toggleLoginBox;
 window.resetPassword = resetPassword;
-      
