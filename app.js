@@ -398,7 +398,7 @@ function friendlyError(error) {
   if (code.includes("too-many-requests")) {
     return "Too many attempts. Please wait a moment and try again.";
   }
-  return "Something went wrong. Please try again.";
+  return "Something went wrong (" + code + "). Please try again.";
 }
 
 // Make these functions callable from onclick="" in the HTML
@@ -415,4 +415,4 @@ window.approveSeller = approveSeller;
 window.rejectSeller = rejectSeller;
 window.toggleLoginBox = toggleLoginBox;
 window.resetPassword = resetPassword;
-  
+      
