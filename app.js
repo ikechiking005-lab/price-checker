@@ -248,6 +248,7 @@ function showLoggedInView(name, role) {
     addPriceMenuLink.style.display = "block";
     addPriceNote.innerHTML = "";
     addPriceForm.style.display = "block";
+    renderAdminProfileHeader(name);
   }
 
   // Show the admin panel link/section only for admins
@@ -320,6 +321,27 @@ async function loadPendingSellers() {
   listDiv.innerHTML = html;
 }
 
+// ===== ADMIN: TOGGLE DASHBOARD VISIBILITY =====
+function toggleAdminDashboard() {
+  const body = document.getElementById("adminDashboardBody");
+  const isOpen = body.style.display === "block";
+  body.style.display = isOpen ? "none" : "block";
+  if (!isOpen) loadPendingSellers();
+}
+
+// ===== ADMIN: TOGGLE THE EDIT NAME/PASSWORD BOX =====
+function toggleEditProfile() {
+  const box = document.getElementById("editProfileBox");
+  box.style.display = box.style.display === "none" ? "block" : "none";
+}
+
+// ===== ADMIN: FILL IN THE PROFILE HEADER (name + avatar initials) =====
+function renderAdminProfileHeader(name) {
+  document.getElementById("adminProfileName").innerText = name;
+  const initials = name.trim().split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
+  document.getElementById("adminAvatar").innerText = initials || "A";
+}
+
 // ===== ADMIN: UPDATE MY OWN DISPLAY NAME =====
 async function updateMyName() {
   const newName = document.getElementById("adminNameInput").value.trim();
@@ -334,6 +356,7 @@ async function updateMyName() {
     await updateProfile(auth.currentUser, { displayName: newName });
     await setDoc(doc(db, "users", auth.currentUser.uid), { name: newName }, { merge: true });
     document.getElementById("welcomeName").innerText = newName;
+    renderAdminProfileHeader(newName);
     status.innerHTML = "✅ Name updated.";
   } catch (error) {
     status.innerHTML = "❌ " + friendlyError(error);
@@ -488,6 +511,8 @@ window.rejectSeller = rejectSeller;
 window.suspendSeller = suspendSeller;
 window.updateMyName = updateMyName;
 window.updateMyPassword = updateMyPassword;
+window.toggleAdminDashboard = toggleAdminDashboard;
+window.toggleEditProfile = toggleEditProfile;
 window.toggleLoginBox = toggleLoginBox;
 window.resetPassword = resetPassword;
-      
+  
