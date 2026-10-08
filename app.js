@@ -7,7 +7,8 @@ import {
   signOut,
   onAuthStateChanged,
   updateProfile,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  updatePassword
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 import {
   getFirestore,
@@ -227,6 +228,10 @@ function showLoggedInView(name, role) {
     addPriceMenuLink.style.display = "block";
     addPriceNote.innerHTML = "Your seller account is still pending review.";
     addPriceForm.style.display = "none";
+  } else if (role === "suspended") {
+    roleStatus.innerHTML = "⛔ Your seller account has been <strong>suspended</strong>. Please contact us for more information.";
+    addPriceSection.style.display = "none";
+    addPriceMenuLink.style.display = "none";
   } else if (role === "rejected") {
     roleStatus.innerHTML = "😔 Your seller application was <strong>not approved</strong> this time. You can still use NaijaPrice as a buyer, or contact us to ask about your application.";
     addPriceSection.style.display = "none";
@@ -271,36 +276,99 @@ function showLoggedOutView() {
   document.getElementById("addPriceMenuLink").style.display = "none";
 }
 
-// ===== ADMIN: LOAD ALL PENDING SELLERS =====
+// ===== ADMIN: LOAD ALL PENDING SELLERS + STATS =====
 async function loadPendingSellers() {
   const listDiv = document.getElementById("pendingSellersList");
   listDiv.innerHTML = "Loading...";
 
-  const usersRef = collection(db, "users");
-  const q = query(usersRef, where("role", "==", "pending_seller"));
-  const snapshot = await getDocs(q);
+  // Load every user once, then count roles locally (fine at this small scale)
+  const allSnapshot = await getDocs(collection(db, "users"));
+  let totalCount = 0, buyerCount = 0, pendingCount = 0, verifiedCount = 0;
+  const pendingUsers = [];
 
-  if (snapshot.empty) {
+  allSnapshot.forEach((docSnap) => {
+    totalCount++;
+    const u = docSnap.data();
+    if (u.role === "buyer") buyerCount++;
+    if (u.role === "pending_seller") { pendingCount++; pendingUsers.push({ id: docSnap.id, ...u }); }
+    if (u.role === "verified_seller") verifiedCount++;
+  });
+
+  document.getElementById("statTotal").innerText = totalCount;
+  document.getElementById("statBuyers").innerText = buyerCount;
+  document.getElementById("statPending").innerText = pendingCount;
+  document.getElementById("statVerified").innerText = verifiedCount;
+
+  if (pendingUsers.length === 0) {
     listDiv.innerHTML = "<p>No pending sellers right now. 🎉</p>";
     return;
   }
 
   let html = "";
-  snapshot.forEach((docSnap) => {
-    const u = docSnap.data();
-    const id = docSnap.id;
+  pendingUsers.forEach((u) => {
     html += `
       <div class="pending-card">
         <p><strong>${u.name}</strong></p>
         <p>🏪 ${u.shopName} — ${u.market}</p>
         <p>📞 ${u.phone}</p>
         <p>✉️ ${u.email}</p>
-        <button onclick="approveSeller('${id}')" class="approve-btn">✅ Approve</button>
-        <button onclick="rejectSeller('${id}')" class="reject-btn">❌ Reject</button>
+        <button onclick="approveSeller('${u.id}')" class="approve-btn">✅ Approve</button>
+        <button onclick="rejectSeller('${u.id}')" class="reject-btn">❌ Reject</button>
       </div>
     `;
   });
   listDiv.innerHTML = html;
+}
+
+// ===== ADMIN: UPDATE MY OWN DISPLAY NAME =====
+async function updateMyName() {
+  const newName = document.getElementById("adminNameInput").value.trim();
+  const status = document.getElementById("profileStatus");
+
+  if (!newName) {
+    status.innerHTML = "⚠️ Please type a name first.";
+    return;
+  }
+
+  try {
+    await updateProfile(auth.currentUser, { displayName: newName });
+    await setDoc(doc(db, "users", auth.currentUser.uid), { name: newName }, { merge: true });
+    document.getElementById("welcomeName").innerText = newName;
+    status.innerHTML = "✅ Name updated.";
+  } catch (error) {
+    status.innerHTML = "❌ " + friendlyError(error);
+  }
+}
+
+// ===== ADMIN: UPDATE MY OWN PASSWORD =====
+async function updateMyPassword() {
+  const newPassword = document.getElementById("adminNewPassword").value;
+  const status = document.getElementById("profileStatus");
+
+  if (!newPassword || newPassword.length < 6) {
+    status.innerHTML = "⚠️ Password must be at least 6 characters.";
+    return;
+  }
+
+  try {
+    await updatePassword(auth.currentUser, newPassword);
+    status.innerHTML = "✅ Password updated.";
+    document.getElementById("adminNewPassword").value = "";
+  } catch (error) {
+    if (error.code && error.code.includes("requires-recent-login")) {
+      status.innerHTML = "⚠️ For security, please log out and log back in, then try changing your password again.";
+    } else {
+      status.innerHTML = "❌ " + friendlyError(error);
+    }
+  }
+}
+
+// ===== ADMIN: SUSPEND A VERIFIED SELLER (e.g. for a reported problem) =====
+async function suspendSeller(userId) {
+  const sure = confirm("Suspend this seller? They will lose their verified status until re-approved.");
+  if (!sure) return;
+  await updateDoc(doc(db, "users", userId), { role: "suspended" });
+  loadPendingSellers();
 }
 
 // ===== ADMIN: APPROVE A SELLER =====
@@ -417,5 +485,9 @@ window.searchPrice = searchPrice;
 window.addPrice = addPrice;
 window.approveSeller = approveSeller;
 window.rejectSeller = rejectSeller;
+window.suspendSeller = suspendSeller;
+window.updateMyName = updateMyName;
+window.updateMyPassword = updateMyPassword;
 window.toggleLoginBox = toggleLoginBox;
 window.resetPassword = resetPassword;
+      
