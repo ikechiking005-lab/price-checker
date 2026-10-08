@@ -95,29 +95,50 @@
     </section>
 
     <!-- ADMIN PANEL: only visible when logged in as admin -->
-    <section class="admin-section" id="adminSection" style="display:none;">
-      <h2>🛠️ Admin Panel</h2>
+    <section class="admin-section" id="adminSection" style="display:none; padding:0; overflow:hidden;">
 
-      <div class="stats-grid" id="adminStats">
-        <div class="stat-card"><span class="stat-number" id="statTotal">–</span><span class="stat-label">Total Users</span></div>
-        <div class="stat-card"><span class="stat-number" id="statBuyers">–</span><span class="stat-label">Buyers</span></div>
-        <div class="stat-card"><span class="stat-number" id="statPending">–</span><span class="stat-label">Pending</span></div>
-        <div class="stat-card"><span class="stat-number" id="statVerified">–</span><span class="stat-label">Verified Sellers</span></div>
+      <!-- Facebook-style profile header -->
+      <div class="admin-cover"></div>
+      <div class="admin-profile-row">
+        <div class="admin-avatar" id="adminAvatar">?</div>
+        <div class="admin-identity">
+          <p class="admin-profile-name" id="adminProfileName">Admin</p>
+          <span class="founder-badge">Founder &amp; Admin</span>
+        </div>
       </div>
+      <p class="admin-follower-count"><span id="statFollowers">0</span> followers</p>
 
-      <h3 class="admin-subheading">Pending Sellers</h3>
-      <div id="pendingSellersList"></div>
+      <button class="dashboard-toggle-btn" onclick="toggleAdminDashboard()">📊 Dashboard</button>
 
-      <hr>
+      <!-- Hidden until "Dashboard" is tapped -->
+      <div id="adminDashboardBody" style="display:none; padding:20px;">
 
-      <h3 class="admin-subheading">⚙️ My Profile</h3>
-      <input type="text" id="adminNameInput" placeholder="Display name">
-      <button onclick="updateMyName()" class="secondary-btn">Update Name</button>
+        <div class="stats-grid" id="adminStats">
+          <div class="stat-card"><span class="stat-number" id="statTotal">–</span><span class="stat-label">Total Users</span></div>
+          <div class="stat-card"><span class="stat-number" id="statBuyers">–</span><span class="stat-label">Buyers</span></div>
+          <div class="stat-card"><span class="stat-number" id="statPending">–</span><span class="stat-label">Pending</span></div>
+          <div class="stat-card"><span class="stat-number" id="statVerified">–</span><span class="stat-label">Verified Sellers</span></div>
+        </div>
 
-      <input type="password" id="adminNewPassword" placeholder="New password (min 6 characters)" style="margin-top:14px;">
-      <button onclick="updateMyPassword()" class="secondary-btn">Update Password</button>
+        <h3 class="admin-subheading">Pending Sellers</h3>
+        <div id="pendingSellersList"></div>
 
-      <p id="profileStatus"></p>
+        <hr>
+
+        <a href="#" class="text-link" id="editProfileToggle" onclick="toggleEditProfile(); return false;">✏️ Edit name &amp; password</a>
+
+        <div id="editProfileBox" style="display:none; margin-top:10px;">
+          <input type="text" id="adminNameInput" placeholder="Display name">
+          <button onclick="updateMyName()" class="secondary-btn">Update Name</button>
+
+          <input type="password" id="adminNewPassword" placeholder="New password (min 6 characters)" style="margin-top:14px;">
+          <button onclick="updateMyPassword()" class="secondary-btn">Update Password</button>
+
+          <p class="form-note" style="margin-top:8px;">📷 Profile photo upload is coming once photo storage is set up for product images too.</p>
+        </div>
+
+        <p id="profileStatus"></p>
+      </div>
     </section>
 
     <!-- MARKETPLACE CONTENT: only visible once someone is logged in -->
@@ -191,5 +212,5 @@
 
   <script type="module" src="app.js"></script>
 </body>
-            </html>
-        
+      </html>
+      
