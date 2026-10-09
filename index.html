@@ -98,14 +98,22 @@
     <section class="admin-section" id="adminSection" style="display:none; padding:0; overflow:hidden;">
 
       <!-- Facebook-style profile header -->
-      <div class="admin-cover"></div>
-      <div class="admin-profile-row">
-        <div class="admin-avatar" id="adminAvatar">?</div>
-        <div class="admin-identity">
-          <p class="admin-profile-name" id="adminProfileName">Admin</p>
-          <span class="founder-badge">Founder &amp; Admin</span>
-        </div>
+      <div class="admin-cover" id="adminCover">
+        <input type="file" id="coverPhotoInput" accept="image/*" style="display:none;" onchange="handleCoverPhoto(event)">
+        <button class="cover-camera-btn" onclick="document.getElementById('coverPhotoInput').click()">📷</button>
       </div>
+
+      <div class="admin-avatar-wrap">
+        <div class="admin-avatar" id="adminAvatar">?</div>
+        <input type="file" id="avatarPhotoInput" accept="image/*" style="display:none;" onchange="handleAvatarPhoto(event)">
+        <button class="avatar-camera-btn" onclick="document.getElementById('avatarPhotoInput').click()">📷</button>
+      </div>
+
+      <div class="admin-identity-centered">
+        <p class="admin-profile-name-big" id="adminProfileName">Admin</p>
+        <span class="founder-badge">Founder &amp; Admin</span>
+      </div>
+
       <p class="admin-follower-count"><span id="statFollowers">0</span> followers</p>
 
       <button class="dashboard-toggle-btn" onclick="toggleAdminDashboard()">📊 Dashboard</button>
@@ -128,13 +136,13 @@
         <a href="#" class="text-link" id="editProfileToggle" onclick="toggleEditProfile(); return false;">✏️ Edit name &amp; password</a>
 
         <div id="editProfileBox" style="display:none; margin-top:10px;">
-          <input type="text" id="adminNameInput" placeholder="Display name">
+          <p class="form-note">📷 Tap the camera icons on your cover photo or avatar above to change them.</p>
+
+          <input type="text" id="adminNameInput" placeholder="Display name" style="margin-top:14px;">
           <button onclick="updateMyName()" class="secondary-btn">Update Name</button>
 
           <input type="password" id="adminNewPassword" placeholder="New password (min 6 characters)" style="margin-top:14px;">
           <button onclick="updateMyPassword()" class="secondary-btn">Update Password</button>
-
-          <p class="form-note" style="margin-top:8px;">📷 Profile photo upload is coming once photo storage is set up for product images too.</p>
         </div>
 
         <p id="profileStatus"></p>
@@ -212,5 +220,5 @@
 
   <script type="module" src="app.js"></script>
 </body>
-      </html>
-      
+                                   </html>
+                                   
