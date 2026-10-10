@@ -40,7 +40,6 @@ const db = getFirestore(app);
 
 // Keeps track of the currently logged-in user's role ("buyer", "pending_seller", "verified_seller")
 let currentUserRole = null;
-let currentCoverURL = null;
 
 // ===== PRICE DATA (still in-memory for now — Phase 3 will save this permanently) =====
 let prices = [
@@ -250,7 +249,6 @@ function showLoggedInView(name, role, photoURL, coverURL) {
     addPriceMenuLink.style.display = "block";
     addPriceNote.innerHTML = "";
     addPriceForm.style.display = "block";
-    renderAdminProfileHeader(name, photoURL, coverURL);
   }
 
   // Show the admin panel link/section only for admins
@@ -323,98 +321,10 @@ async function loadPendingSellers() {
   listDiv.innerHTML = html;
 }
 
-// ===== ADMIN: TOGGLE DASHBOARD VISIBILITY =====
-function toggleAdminDashboard() {
-  const body = document.getElementById("adminDashboardBody");
-  const isOpen = body.style.display === "block";
-  body.style.display = isOpen ? "none" : "block";
-  if (!isOpen) loadPendingSellers();
-}
-
 // ===== ADMIN: TOGGLE THE EDIT NAME/PASSWORD BOX =====
 function toggleEditProfile() {
   const box = document.getElementById("editProfileBox");
   box.style.display = box.style.display === "none" ? "block" : "none";
-}
-
-// ===== ADMIN: FILL IN THE PROFILE HEADER (name + avatar photo/initials + cover) =====
-function renderAdminProfileHeader(name, photoURL, coverURL) {
-  document.getElementById("adminProfileName").innerText = name;
-  const avatarEl = document.getElementById("adminAvatar");
-
-  if (photoURL) {
-    avatarEl.innerHTML = `<img src="${photoURL}" alt="${name}">`;
-  } else {
-    const initials = name.trim().split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
-    avatarEl.innerHTML = "";
-    avatarEl.innerText = initials || "A";
-  }
-
-  currentCoverURL = coverURL || null;
-  const coverEl = document.getElementById("adminCover");
-  if (coverURL) {
-    coverEl.style.backgroundImage = `url(${coverURL})`;
-  } else {
-    coverEl.style.backgroundImage = "";
-  }
-}
-
-// ===== SHRINK AN IMAGE FILE DOWN TO A SMALL DATA-URL (no Firebase Storage needed) =====
-function resizeImageToDataURL(file, maxWidth) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const scale = Math.min(1, maxWidth / img.width);
-        const canvas = document.createElement("canvas");
-        canvas.width = img.width * scale;
-        canvas.height = img.height * scale;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/jpeg", 0.8));
-      };
-      img.onerror = reject;
-      img.src = e.target.result;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-// ===== ADMIN: AVATAR PHOTO CHANGED =====
-async function handleAvatarPhoto(event) {
-  const file = event.target.files[0];
-  const status = document.getElementById("profileStatus");
-  if (!file) return;
-
-  status.innerHTML = "⏳ Saving photo...";
-  try {
-    const dataUrl = await resizeImageToDataURL(file, 400);
-    await setDoc(doc(db, "users", auth.currentUser.uid), { photoURL: dataUrl }, { merge: true });
-    renderAdminProfileHeader(auth.currentUser.displayName || document.getElementById("adminProfileName").innerText, dataUrl, currentCoverURL);
-    status.innerHTML = "✅ Profile photo updated.";
-  } catch (error) {
-    status.innerHTML = "❌ Something went wrong saving the photo. Please try a smaller image.";
-  }
-}
-
-// ===== ADMIN: COVER PHOTO CHANGED =====
-async function handleCoverPhoto(event) {
-  const file = event.target.files[0];
-  const status = document.getElementById("profileStatus");
-  if (!file) return;
-
-  status.innerHTML = "⏳ Saving cover photo...";
-  try {
-    const dataUrl = await resizeImageToDataURL(file, 400);
-    await setDoc(doc(db, "users", auth.currentUser.uid), { coverURL: dataUrl }, { merge: true });
-    currentCoverURL = dataUrl;
-    document.getElementById("adminCover").style.backgroundImage = `url(${dataUrl})`;
-    status.innerHTML = "✅ Cover photo updated.";
-  } catch (error) {
-    status.innerHTML = "❌ Something went wrong saving the cover photo. Please try a smaller image.";
-  }
 }
 
 // ===== ADMIN: UPDATE MY OWN DISPLAY NAME =====
@@ -431,8 +341,6 @@ async function updateMyName() {
     await updateProfile(auth.currentUser, { displayName: newName });
     await setDoc(doc(db, "users", auth.currentUser.uid), { name: newName }, { merge: true });
     document.getElementById("welcomeName").innerText = newName;
-    const existingImg = document.querySelector("#adminAvatar img");
-    renderAdminProfileHeader(newName, existingImg ? existingImg.src : null, currentCoverURL);
     status.innerHTML = "✅ Name updated.";
   } catch (error) {
     status.innerHTML = "❌ " + friendlyError(error);
@@ -544,4 +452,50 @@ function renderAllPrices() {
     .join("");
 }
 
-function capi
+function capitalize(word) {
+  return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
+// Turns technical Firebase error codes into plain, human messages
+function friendlyError(error) {
+  const code = error.code || "";
+  if (code.includes("email-already-in-use")) {
+    return "This email is already registered. Please log in instead.";
+  }
+  if (code.includes("invalid-credential") || code.includes("wrong-password") || code.includes("user-not-found")) {
+    return "Incorrect email or password. Please try again.";
+  }
+  if (code.includes("weak-password")) {
+    return "Please choose a password with at least 6 characters.";
+  }
+  if (code.includes("invalid-email")) {
+    return "Please enter a valid email address.";
+  }
+  if (code.includes("network-request-failed")) {
+    return "Network error. Please check your connection and try again.";
+  }
+  if (code.includes("too-many-requests")) {
+    return "Too many attempts. Please wait a moment and try again.";
+  }
+  return "Something went wrong (" + code + "). Please try again.";
+}
+
+// Make these functions callable from onclick="" in the HTML
+// (needed because this file is a "module", which doesn't expose functions globally by default)
+window.showRoleForm = showRoleForm;
+window.signUpBuyer = signUpBuyer;
+window.signUpSeller = signUpSeller;
+window.logIn = logIn;
+window.logOut = logOut;
+window.toggleMenu = toggleMenu;
+window.searchPrice = searchPrice;
+window.addPrice = addPrice;
+window.approveSeller = approveSeller;
+window.rejectSeller = rejectSeller;
+window.suspendSeller = suspendSeller;
+window.updateMyName = updateMyName;
+window.updateMyPassword = updateMyPassword;
+window.toggleEditProfile = toggleEditProfile;
+window.toggleLoginBox = toggleLoginBox;
+window.resetPassword = resetPassword;
+  
