@@ -51,6 +51,20 @@ let prices = [
 
 // ===== RUNS AS SOON AS THE PAGE LOADS =====
 renderAllPrices();
+trackVisit();
+
+// ===== TRACK A PAGE VISIT (for link-click stats in the Admin Panel) =====
+async function trackVisit() {
+  try {
+    const counterRef = doc(db, "stats", "visits");
+    const snap = await getDoc(counterRef);
+    const current = snap.exists() ? snap.data().count || 0 : 0;
+    await setDoc(counterRef, { count: current + 1 });
+  } catch (error) {
+    // Fail silently — a visit-counter issue should never block the real app from working
+    console.log("Visit tracking skipped:", error.message);
+  }
+}
 
 // Watches for login/logout changes automatically
 onAuthStateChanged(auth, async (user) => {
@@ -277,44 +291,88 @@ function showLoggedOutView() {
   document.getElementById("addPriceMenuLink").style.display = "none";
 }
 
-// ===== ADMIN: LOAD ALL PENDING SELLERS + STATS =====
-async function loadPendingSellers() {
-  const listDiv = document.getElementById("pendingSellersList");
-  listDiv.innerHTML = "Loading...";
+// Holds the last-loaded seller lists so switching tabs doesn't need a fresh database read
+let sellersByStatus = { pending: [], approved: [], rejected: [] };
+let currentSellerTab = "pending";
 
-  // Load every user once, then count roles locally (fine at this small scale)
+// ===== ADMIN: LOAD ALL USERS, SPLIT BY STATUS, UPDATE STATS =====
+async function loadPendingSellers() {
   const allSnapshot = await getDocs(collection(db, "users"));
   let totalCount = 0, buyerCount = 0, pendingCount = 0, verifiedCount = 0;
-  const pendingUsers = [];
+  sellersByStatus = { pending: [], approved: [], rejected: [] };
 
   allSnapshot.forEach((docSnap) => {
     totalCount++;
-    const u = docSnap.data();
+    const u = { id: docSnap.id, ...docSnap.data() };
     if (u.role === "buyer") buyerCount++;
-    if (u.role === "pending_seller") { pendingCount++; pendingUsers.push({ id: docSnap.id, ...u }); }
-    if (u.role === "verified_seller") verifiedCount++;
+    if (u.role === "pending_seller") { pendingCount++; sellersByStatus.pending.push(u); }
+    if (u.role === "verified_seller") { verifiedCount++; sellersByStatus.approved.push(u); }
+    if (u.role === "suspended") { sellersByStatus.approved.push(u); } // shown in Approved tab, marked suspended
+    if (u.role === "rejected") { sellersByStatus.rejected.push(u); }
   });
+
+  try {
+    const visitSnap = await getDoc(doc(db, "stats", "visits"));
+    document.getElementById("statVisits").innerText = visitSnap.exists() ? visitSnap.data().count : 0;
+  } catch (error) {
+    document.getElementById("statVisits").innerText = "–";
+  }
 
   document.getElementById("statTotal").innerText = totalCount;
   document.getElementById("statBuyers").innerText = buyerCount;
   document.getElementById("statPending").innerText = pendingCount;
   document.getElementById("statVerified").innerText = verifiedCount;
 
-  if (pendingUsers.length === 0) {
-    listDiv.innerHTML = "<p>No pending sellers right now. 🎉</p>";
+  renderSellerTab(currentSellerTab);
+}
+
+// ===== ADMIN: SWITCH BETWEEN PENDING / APPROVED / REJECTED TABS =====
+function switchSellerTab(tabName) {
+  currentSellerTab = tabName;
+  document.getElementById("tabPending").classList.toggle("active", tabName === "pending");
+  document.getElementById("tabApproved").classList.toggle("active", tabName === "approved");
+  document.getElementById("tabRejected").classList.toggle("active", tabName === "rejected");
+  renderSellerTab(tabName);
+}
+
+// ===== ADMIN: RENDER THE CURRENTLY SELECTED TAB'S SELLER LIST =====
+function renderSellerTab(tabName) {
+  const listDiv = document.getElementById("pendingSellersList");
+  const users = sellersByStatus[tabName] || [];
+
+  if (users.length === 0) {
+    const emptyMessages = {
+      pending: "No pending sellers right now. 🎉",
+      approved: "No approved sellers yet.",
+      rejected: "No rejected applications."
+    };
+    listDiv.innerHTML = `<p>${emptyMessages[tabName]}</p>`;
     return;
   }
 
   let html = "";
-  pendingUsers.forEach((u) => {
+  users.forEach((u) => {
+    let actionButtons = "";
+    if (tabName === "pending") {
+      actionButtons = `
+        <button onclick="approveSeller('${u.id}')" class="approve-btn">✅ Approve</button>
+        <button onclick="rejectSeller('${u.id}')" class="reject-btn">❌ Reject</button>
+      `;
+    } else if (tabName === "approved") {
+      actionButtons = u.role === "suspended"
+        ? `<p class="suspended-label">⛔ Suspended</p><button onclick="approveSeller('${u.id}')" class="approve-btn">✅ Re-approve</button>`
+        : `<button onclick="suspendSeller('${u.id}')" class="reject-btn">⛔ Suspend</button>`;
+    } else if (tabName === "rejected") {
+      actionButtons = `<button onclick="approveSeller('${u.id}')" class="approve-btn">✅ Approve anyway</button>`;
+    }
+
     html += `
       <div class="pending-card">
         <p><strong>${u.name}</strong></p>
         <p>🏪 ${u.shopName} — ${u.market}</p>
         <p>📞 ${u.phone}</p>
         <p>✉️ ${u.email}</p>
-        <button onclick="approveSeller('${u.id}')" class="approve-btn">✅ Approve</button>
-        <button onclick="rejectSeller('${u.id}')" class="reject-btn">❌ Reject</button>
+        ${actionButtons}
       </div>
     `;
   });
@@ -477,25 +535,4 @@ function friendlyError(error) {
   if (code.includes("too-many-requests")) {
     return "Too many attempts. Please wait a moment and try again.";
   }
-  return "Something went wrong (" + code + "). Please try again.";
-}
-
-// Make these functions callable from onclick="" in the HTML
-// (needed because this file is a "module", which doesn't expose functions globally by default)
-window.showRoleForm = showRoleForm;
-window.signUpBuyer = signUpBuyer;
-window.signUpSeller = signUpSeller;
-window.logIn = logIn;
-window.logOut = logOut;
-window.toggleMenu = toggleMenu;
-window.searchPrice = searchPrice;
-window.addPrice = addPrice;
-window.approveSeller = approveSeller;
-window.rejectSeller = rejectSeller;
-window.suspendSeller = suspendSeller;
-window.updateMyName = updateMyName;
-window.updateMyPassword = updateMyPassword;
-window.toggleEditProfile = toggleEditProfile;
-window.toggleLoginBox = toggleLoginBox;
-window.resetPassword = resetPassword;
-  
+  return "Something went wrong (" + code + "). Please try again."
