@@ -97,38 +97,25 @@
     <!-- ADMIN PANEL: only visible when logged in as admin -->
     <section class="admin-section" id="adminSection" style="display:none; padding:0; overflow:hidden;">
 
-      <!-- Facebook-style profile header -->
-      <div class="admin-cover" id="adminCover">
-        <input type="file" id="coverPhotoInput" accept="image/*" style="display:none;" onchange="handleCoverPhoto(event)">
-        <button class="cover-camera-btn" onclick="document.getElementById('coverPhotoInput').click()">📷</button>
-      </div>
-
-      <div class="admin-avatar-wrap">
-        <div class="admin-avatar" id="adminAvatar">?</div>
-        <input type="file" id="avatarPhotoInput" accept="image/*" style="display:none;" onchange="handleAvatarPhoto(event)">
-        <button class="avatar-camera-btn" onclick="document.getElementById('avatarPhotoInput').click()">📷</button>
-      </div>
-
-      <div class="admin-identity-centered">
-        <p class="admin-profile-name-big" id="adminProfileName">Admin</p>
-        <span class="founder-badge">Founder &amp; Admin</span>
-      </div>
-
-      <p class="admin-follower-count"><span id="statFollowers">0</span> followers</p>
-
-      <button class="dashboard-toggle-btn" onclick="toggleAdminDashboard()">📊 Dashboard</button>
+      <h3 style="padding:16px 16px 0;">🛠️ Admin Panel</h3>
 
       <!-- Hidden until "Dashboard" is tapped -->
-      <div id="adminDashboardBody" style="display:none; padding:20px;">
+      <div id="adminDashboardBody" style="display:block; padding:20px;">
 
         <div class="stats-grid" id="adminStats">
+          <div class="stat-card"><span class="stat-number" id="statVisits">–</span><span class="stat-label">Total Visits</span></div>
           <div class="stat-card"><span class="stat-number" id="statTotal">–</span><span class="stat-label">Total Users</span></div>
           <div class="stat-card"><span class="stat-number" id="statBuyers">–</span><span class="stat-label">Buyers</span></div>
           <div class="stat-card"><span class="stat-number" id="statPending">–</span><span class="stat-label">Pending</span></div>
           <div class="stat-card"><span class="stat-number" id="statVerified">–</span><span class="stat-label">Verified Sellers</span></div>
         </div>
 
-        <h3 class="admin-subheading">Pending Sellers</h3>
+        <h3 class="admin-subheading">Sellers</h3>
+        <div class="seller-tabs">
+          <button id="tabPending" class="seller-tab active" onclick="switchSellerTab('pending')">Pending</button>
+          <button id="tabApproved" class="seller-tab" onclick="switchSellerTab('approved')">Approved</button>
+          <button id="tabRejected" class="seller-tab" onclick="switchSellerTab('rejected')">Rejected</button>
+        </div>
         <div id="pendingSellersList"></div>
 
         <hr>
@@ -136,9 +123,7 @@
         <a href="#" class="text-link" id="editProfileToggle" onclick="toggleEditProfile(); return false;">✏️ Edit name &amp; password</a>
 
         <div id="editProfileBox" style="display:none; margin-top:10px;">
-          <p class="form-note">📷 Tap the camera icons on your cover photo or avatar above to change them.</p>
-
-          <input type="text" id="adminNameInput" placeholder="Display name" style="margin-top:14px;">
+          <input type="text" id="adminNameInput" placeholder="Display name">
           <button onclick="updateMyName()" class="secondary-btn">Update Name</button>
 
           <input type="password" id="adminNewPassword" placeholder="New password (min 6 characters)" style="margin-top:14px;">
@@ -220,5 +205,5 @@
 
   <script type="module" src="app.js"></script>
 </body>
-            </html>
-            
+  </html>
+  
