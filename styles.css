@@ -376,6 +376,38 @@ hr {
   margin: 0 0 10px;
 }
 
+.seller-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 4px;
+}
+
+.seller-tab {
+  flex: 1;
+  background: transparent;
+  color: var(--primary);
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px;
+  border-radius: 7px;
+}
+
+.seller-tab.active {
+  background: var(--primary-light);
+  color: white;
+}
+
+.suspended-label {
+  color: #8e1c1c;
+  font-weight: bold;
+  font-size: 13px;
+  margin: 4px 0;
+}
+
 .pending-card {
   background: var(--bg);
   border: 1px solid #e8dfc4;
