@@ -1,443 +1,264 @@
-* {
-  box-sizing: border-box;
-}
+/* =====================================
+   NAIJA PRICE — ADMIN DASHBOARD UPGRADE
+   ===================================== */
 
 :root {
-  --primary: #0f3d2e;
-  --primary-light: #16543f;
-  --accent: #d4af37;
-  --bg: #faf6ee;
-  --text: #22201c;
+  --admin-green: #0f3d2e;
+  --admin-green-light: #16543f;
+  --admin-gold: #d4af37;
+  --admin-background: #f5f7f5;
+  --admin-white: #ffffff;
+  --admin-muted: #64748b;
 }
 
-body {
-  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
-  background: var(--bg);
-  margin: 0;
-  padding: 0;
-  color: var(--text);
-  -webkit-font-smoothing: antialiased;
+/* Dashboard background */
+#adminSection {
+  background: var(--admin-background);
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid #e2e8e2;
 }
 
-h1, h2, h3, .logo, button {
-  font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
-}
-
-/* Header with logo */
-header {
-  background: linear-gradient(135deg, #0a2b20, #16543f);
-  color: white;
-  padding: 16px 16px 30px;
-  text-align: center;
-  border-bottom: 3px solid var(--accent);
-}
-
-.header-top-row {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  width: 100%;
-}
-
-.menu-btn {
-  background: rgba(255,255,255,0.12);
-  border: 1px solid rgba(212,175,55,0.4);
-  color: var(--accent);
-  font-size: 22px;
-  padding: 6px 12px;
-  border-radius: 6px;
-}
-
-.logo {
-  margin-top: 22px;
-  font-size: 32px;
+/* Dashboard headings */
+#adminSection h2 {
+  font-size: 23px;
   font-weight: 700;
-  letter-spacing: 0.3px;
+  color: var(--admin-green);
+  margin-bottom: 18px;
 }
 
-.logo-icon {
-  margin-right: 8px;
+#adminSection h3,
+.admin-subheading {
+  color: var(--admin-green);
+  font-weight: 700;
 }
 
-.logo-text {
-  color: white;
+/* Statistics layout */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 20px 0;
 }
 
-.logo-accent {
-  color: var(--accent);
+.stat-card {
+  min-width: 0;
+  min-height: 110px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(145deg, #0a2b20, #176044);
+  border: 1px solid rgba(212, 175, 55, 0.45);
+  border-radius: 16px;
+  padding: 16px 10px;
+  box-shadow: 0 5px 14px rgba(15, 61, 46, 0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.tagline {
-  margin: 8px 0 0;
-  font-size: 14px;
-  opacity: 0.9;
+.stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(15, 61, 46, 0.18);
 }
 
-.tagline.small {
+.stat-number {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--admin-gold);
+  line-height: 1.3;
+}
+
+.stat-label {
   font-size: 12px;
-  opacity: 0.7;
-  color: var(--accent);
+  text-align: center;
+  color: #ffffff;
+  margin-top: 7px;
 }
 
-/* Slide-out menu — now opens from the right */
+/* Admin profile editing area */
+#editProfileBox {
+  background: #ffffff;
+  padding: 18px;
+  margin-top: 18px;
+  border: 1px solid #e2e8e2;
+  border-radius: 16px;
+  box-shadow: 0 4px 14px rgba(15, 61, 46, 0.06);
+}
+
+#editProfileBox input {
+  background: #fbfdfb;
+  border: 1px solid #d7e1d8;
+  border-radius: 10px;
+  padding: 13px;
+}
+
+#editProfileBox button {
+  background: var(--admin-green);
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+#editProfileBox button:hover {
+  background: var(--admin-green-light);
+}
+
+/* Seller management cards */
+.pending-card {
+  background: #ffffff;
+  padding: 16px;
+  border: 1px solid #e0e8e0;
+  border-left: 4px solid var(--admin-gold);
+  border-radius: 13px;
+  margin-bottom: 14px;
+  box-shadow: 0 3px 10px rgba(15, 61, 46, 0.05);
+  overflow-wrap: anywhere;
+}
+
+.pending-card p {
+  line-height: 1.6;
+  color: #334155;
+}
+
+.approve-btn,
+.reject-btn {
+  width: 48%;
+  min-height: 42px;
+  border-radius: 9px;
+  font-size: 13px;
+  margin-top: 10px;
+}
+
+.approve-btn {
+  background: #167544;
+}
+
+.approve-btn:hover {
+  background: #105c34;
+}
+
+.reject-btn {
+  background: #a52626;
+}
+
+.reject-btn:hover {
+  background: #811d1d;
+}
+
+/* General admin buttons */
+#adminSection button {
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+#adminSection button:active {
+  transform: scale(0.98);
+}
+
+/* Dashboard inputs */
+#adminSection input {
+  width: 100%;
+  max-width: 100%;
+  border-radius: 10px;
+}
+
+/* Status messages */
+#profileStatus,
+#authStatus,
+#roleStatus {
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+
+/* Side navigation improvements */
 .side-menu {
-  position: fixed;
-  top: 0;
-  right: -260px;
-  width: 240px;
-  height: 100%;
+  width: min(300px, 85vw);
+  right: calc(-1 * min(300px, 85vw));
+  overflow-y: auto;
+  padding: 22px;
   background: #fffdf8;
-  box-shadow: -2px 0 12px rgba(0,0,0,0.25);
-  padding: 20px;
-  transition: right 0.25s ease;
-  z-index: 100;
-  border-left: 3px solid var(--accent);
 }
 
 .side-menu.open {
   right: 0;
 }
 
-.menu-welcome {
-  font-weight: bold;
-  color: var(--primary);
-  margin: 4px 0;
-}
-
-.menu-role-status {
-  font-size: 13px;
-  color: #555;
-  margin: 0 0 10px;
-}
-
-.menu-logout-btn {
-  width: 100%;
-  padding: 8px;
-  font-size: 14px;
-}
-
-.location-line {
-  font-size: 13px;
-  color: var(--primary);
-  font-weight: bold;
-  margin: 0 0 10px;
-}
-
-.location-note {
-  font-weight: normal;
-  color: #888;
-  font-size: 11px;
-}
-
 .side-menu a {
-  display: block;
-  padding: 14px 0;
-  color: var(--primary);
-  text-decoration: none;
-  font-size: 16px;
-  font-weight: 600;
-  border-bottom: 1px solid #eee;
+  padding: 15px 4px;
+  transition: color 0.2s ease;
 }
 
-.close-menu {
-  background: none;
-  border: none;
-  font-size: 20px;
-  float: right;
-  margin-bottom: 10px;
-  color: var(--primary);
+.side-menu a:hover {
+  color: #b18b13;
 }
 
-.overlay {
-  display: none;
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.45);
-  z-index: 99;
-}
-
-.overlay.show {
-  display: block;
-}
-
-main {
-  max-width: 500px;
-  margin: 0 auto;
-  padding: 16px;
-}
-
-section {
-  background: white;
-  border-radius: 16px;
-  padding: 20px;
-  margin-bottom: 18px;
-  box-shadow: 0 4px 16px rgba(15,61,46,0.07), 0 1px 3px rgba(15,61,46,0.06);
-  border: 1px solid #f0e9d8;
-}
-
-h2 {
-  margin-top: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--primary);
-  letter-spacing: 0.2px;
-}
-
-input {
-  width: 100%;
-  padding: 13px 14px;
-  margin-bottom: 11px;
-  border: 1px solid #ddd3ba;
-  border-radius: 10px;
-  font-size: 15px;
-  font-family: 'Inter', sans-serif;
-  background: #fffefb;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-input:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(212,175,55,0.15);
-}
-
+/* Better form appearance */
+input,
 button {
-  width: 100%;
-  padding: 13px;
-  background: var(--primary-light);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.3px;
-  transition: transform 0.08s ease, background 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
-button:active {
-  background: var(--primary);
-  transform: scale(0.98);
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 3px solid rgba(212, 175, 55, 0.65);
+  outline-offset: 2px;
 }
 
-#result {
-  margin-top: 12px;
-  font-weight: bold;
-  font-size: 15px;
-}
-
-/* Category grid */
-.category-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-}
-
-.category-card {
-  background: var(--bg);
-  border-radius: 10px;
-  padding: 14px 6px;
-  text-align: center;
-  border: 1px solid #e8dfc4;
-}
-
-.cat-icon {
-  display: block;
-  font-size: 26px;
-  margin-bottom: 6px;
-}
-
-.cat-name {
-  font-size: 12px;
-  font-weight: bold;
-  color: var(--primary);
-}
-
-.price-item {
-  border-bottom: 1px solid #eee;
-  padding: 8px 0;
-  font-size: 14px;
-}
-
-.price-item:last-child {
-  border-bottom: none;
-}
-
-.about-section p {
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-/* Account section */
-.role-tabs {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 16px;
-  background: var(--bg);
-  border-radius: 12px;
-  padding: 4px;
-  border: 1px solid #ece2c8;
-}
-
-.role-tab {
-  flex: 1;
-  background: transparent;
-  color: var(--primary);
-  border: none;
-  font-weight: 600;
-  border-radius: 9px;
-  padding: 11px;
-}
-
-.role-tab.active {
-  background: var(--primary-light);
-  color: white;
-  box-shadow: 0 2px 6px rgba(15,61,46,0.25);
-}
-
-.form-note {
-  font-size: 13px;
-  color: #555;
-  margin-top: 0;
-}
-
-.secondary-btn {
-  background: #2c2c2c;
-}
-
-.secondary-btn:active {
-  background: #000;
-}
-
-hr {
-  border: none;
-  border-top: 1px solid #eee;
-  margin: 18px 0;
-}
-
-.text-link {
-  display: block;
-  color: var(--primary-light);
-  font-size: 14px;
-  text-decoration: underline;
-  margin: 10px 0;
-}
-
-#authStatus {
-  font-size: 14px;
-  font-weight: bold;
-  margin-top: 10px;
-}
-
-#roleStatus {
-  font-size: 14px;
-}
-
-/* Admin panel */
-
-
-.dashboard-toggle-btn {
-  margin: 14px 16px 16px;
-  width: calc(100% - 32px);
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  margin-bottom: 18px;
-}
-
-.stat-card {
-  background: linear-gradient(135deg, #0a2b20, #16543f);
-  border-radius: 12px;
-  padding: 14px;
-  text-align: center;
-  border: 1px solid rgba(212,175,55,0.3);
-}
-
-.stat-number {
-  display: block;
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--accent);
-  font-family: 'Poppins', sans-serif;
-}
-
-.stat-label {
-  display: block;
-  font-size: 11px;
-  color: #e8e0cc;
-  margin-top: 2px;
-}
-
-.admin-subheading {
-  font-size: 15px;
-  color: var(--primary);
-  margin: 0 0 10px;
-}
-
-.seller-tabs {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 14px;
-  background: var(--bg);
-  border-radius: 10px;
-  padding: 4px;
-}
-
-.seller-tab {
-  flex: 1;
-  background: transparent;
-  color: var(--primary);
-  border: none;
-  font-size: 13px;
-  font-weight: 600;
-  padding: 8px;
-  border-radius: 7px;
-}
-
-.seller-tab.active {
-  background: var(--primary-light);
-  color: white;
-}
-
-.suspended-label {
-  color: #8e1c1c;
-  font-weight: bold;
-  font-size: 13px;
-  margin: 4px 0;
-}
-
-.pending-card {
-  background: var(--bg);
-  border: 1px solid #e8dfc4;
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 12px;
-}
-
-.pending-card p {
-  margin: 4px 0;
-  font-size: 14px;
-}
-
-.approve-btn {
-  background: #1b5e20;
-  width: 48%;
-  display: inline-block;
-  margin-right: 4%;
-}
-
-.reject-btn {
-  background: #8e1c1c;
-  width: 48%;
-  display: inline-block;
-}
-
-footer {
-  text-align: center;
-  padding: 20px;
-  font-size: 12px;
-  color: #777;
+/* Tablet and desktop */
+@media (min-width: 700px) {
+  main {
+    max-width: 900px;
+    padding: 24px;
   }
-    
+
+  #adminSection {
+    padding: 26px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .stat-card {
+    min-height: 130px;
+  }
+
+  .stat-number {
+    font-size: 32px;
+  }
+
+  #editProfileBox {
+    padding: 24px;
+  }
+}
+
+/* Small mobile screens */
+@media (max-width: 360px) {
+  main {
+    padding: 10px;
+  }
+
+  #adminSection {
+    padding: 12px;
+  }
+
+  .stat-card {
+    padding: 12px 6px;
+    min-height: 100px;
+  }
+
+  .stat-number {
+    font-size: 23px;
+  }
+
+  .stat-label {
+    font-size: 10px;
+  }
+
+  .approve-btn,
+  .reject-btn {
+    font-size: 11px;
+    padding: 10px 4px;
+  }
+}
