@@ -80,6 +80,91 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
+// ===== FILL IN DATE-OF-BIRTH DROPDOWNS =====
+function populateDobDropdowns() {
+  const monthSelect = document.getElementById("buyerDobMonth");
+  const daySelect = document.getElementById("buyerDobDay");
+  const yearSelect = document.getElementById("buyerDobYear");
+  if (!monthSelect) return; // not on this page
+
+  const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  months.forEach((m, i) => {
+    const opt = document.createElement("option");
+    opt.value = i + 1;
+    opt.innerText = m;
+    monthSelect.appendChild(opt);
+  });
+
+  for (let d = 1; d <= 31; d++) {
+    const opt = document.createElement("option");
+    opt.value = d;
+    opt.innerText = d;
+    daySelect.appendChild(opt);
+  }
+
+  const currentYear = new Date().getFullYear();
+  for (let y = currentYear - 13; y >= currentYear - 100; y--) {
+    const opt = document.createElement("option");
+    opt.value = y;
+    opt.innerText = y;
+    yearSelect.appendChild(opt);
+  }
+}
+populateDobDropdowns();
+
+// ===== LIVE USERNAME AVAILABILITY CHECK (as they type, lightly debounced) =====
+let usernameCheckTimer = null;
+function checkUsernameLive(value) {
+  const resultEl = document.getElementById("usernameCheckResult");
+  const clean = value.toLowerCase().replace(/[^a-z0-9_]/g, "");
+
+  if (clean.length < 3) {
+    resultEl.innerHTML = clean.length === 0 ? "" : "Must be at least 3 characters.";
+    return;
+  }
+
+  resultEl.innerHTML = "Checking...";
+  clearTimeout(usernameCheckTimer);
+  usernameCheckTimer = setTimeout(async () => {
+    const usernameQuery = query(collection(db, "users"), where("username", "==", clean));
+    const existing = await getDocs(usernameQuery);
+    resultEl.innerHTML = existing.empty
+      ? "✅ Available!"
+      : "❌ Already taken.";
+  }, 500);
+}
+
+// ===== PASSWORD STRENGTH CHECKLIST =====
+function checkPasswordStrength(value) {
+  setCheckState("checkLength", value.length >= 8, "At least 8 characters");
+  setCheckState("checkUpper", /[A-Z]/.test(value), "One uppercase letter (A-Z)");
+  setCheckState("checkNumber", /[0-9]/.test(value), "One number (0-9)");
+  setCheckState("checkSpecial", /[!@#$%^&*]/.test(value), "One special character (!@#$%^&*)");
+}
+
+function setCheckState(elId, passed, label) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.innerHTML = (passed ? "✅ " : "⚪ ") + label;
+}
+
+function passwordMeetsAllRules(value) {
+  return value.length >= 8 && /[A-Z]/.test(value) && /[0-9]/.test(value) && /[!@#$%^&*]/.test(value);
+}
+
+// ===== CONFIRM PASSWORD MATCH CHECK =====
+function checkPasswordMatch() {
+  const pass = document.getElementById("buyerPassword").value;
+  const confirm = document.getElementById("buyerConfirmPassword").value;
+  const resultEl = document.getElementById("passwordMatchResult");
+
+  if (!confirm) {
+    resultEl.innerHTML = "";
+    return;
+  }
+  resultEl.innerHTML = pass === confirm ? "✅ Passwords match." : "❌ Passwords do not match.";
+}
+
 // ===== UI SWITCHING: BUYER TAB / SELLER TAB =====
 function showRoleForm(role) {
   const buyerForm = document.getElementById("buyerForm");
@@ -102,20 +187,66 @@ function showRoleForm(role) {
 
 // ===== SIGN UP: BUYER =====
 async function signUpBuyer() {
-  const name = document.getElementById("buyerName").value.trim();
+  const firstName = document.getElementById("buyerFirstName").value.trim();
+  const lastName = document.getElementById("buyerLastName").value.trim();
+  const usernameRaw = document.getElementById("buyerUsername").value.trim();
+  const dobMonth = document.getElementById("buyerDobMonth").value;
+  const dobDay = document.getElementById("buyerDobDay").value;
+  const dobYear = document.getElementById("buyerDobYear").value;
   const email = document.getElementById("buyerEmail").value.trim();
   const password = document.getElementById("buyerPassword").value;
+  const confirmPassword = document.getElementById("buyerConfirmPassword").value;
+  const agreeTerms = document.getElementById("buyerAgreeTerms").checked;
   const status = document.getElementById("authStatus");
 
-  if (!name || !email || !password) {
-    status.innerHTML = "⚠️ Please fill in all fields.";
+  if (!firstName || !lastName || !usernameRaw || !email || !password) {
+    status.innerHTML = "⚠️ Please fill in all fields, including a username.";
     return;
   }
 
+  const username = usernameRaw.toLowerCase().replace(/[^a-z0-9_]/g, "");
+  if (username.length < 3) {
+    status.innerHTML = "⚠️ Username must be at least 3 characters (letters, numbers, underscore only).";
+    return;
+  }
+
+  if (!dobMonth || !dobDay || !dobYear) {
+    status.innerHTML = "⚠️ Please select your full date of birth.";
+    return;
+  }
+
+  if (!passwordMeetsAllRules(password)) {
+    status.innerHTML = "⚠️ Please meet all the password requirements shown above.";
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    status.innerHTML = "⚠️ Passwords do not match.";
+    return;
+  }
+
+  if (!agreeTerms) {
+    status.innerHTML = "⚠️ Please agree to the Terms of Service and Privacy Policy.";
+    return;
+  }
+
+  status.innerHTML = "⏳ Checking username availability...";
+
   try {
+    const usernameQuery = query(collection(db, "users"), where("username", "==", username));
+    const existing = await getDocs(usernameQuery);
+    if (!existing.empty) {
+      status.innerHTML = "❌ That username is already taken. Please choose another.";
+      return;
+    }
+
     const result = await createUserWithEmailAndPassword(auth, email, password);
     await setDoc(doc(db, "users", result.user.uid), {
-      name: name,
+      name: firstName + " " + lastName,
+      firstName: firstName,
+      lastName: lastName,
+      username: username,
+      dob: dobYear + "-" + dobMonth + "-" + dobDay,
       email: email,
       role: "buyer"
     });
@@ -535,4 +666,29 @@ function friendlyError(error) {
   if (code.includes("too-many-requests")) {
     return "Too many attempts. Please wait a moment and try again.";
   }
-  return "Something went wrong (" + code + "). Please try again."
+  return "Something went wrong (" + code + "). Please try again.";
+}
+
+// Make these functions callable from onclick="" in the HTML
+// (needed because this file is a "module", which doesn't expose functions globally by default)
+window.showRoleForm = showRoleForm;
+window.signUpBuyer = signUpBuyer;
+window.signUpSeller = signUpSeller;
+window.logIn = logIn;
+window.logOut = logOut;
+window.toggleMenu = toggleMenu;
+window.searchPrice = searchPrice;
+window.addPrice = addPrice;
+window.approveSeller = approveSeller;
+window.rejectSeller = rejectSeller;
+window.suspendSeller = suspendSeller;
+window.switchSellerTab = switchSellerTab;
+window.checkUsernameLive = checkUsernameLive;
+window.checkPasswordStrength = checkPasswordStrength;
+window.checkPasswordMatch = checkPasswordMatch;
+window.updateMyName = updateMyName;
+window.updateMyPassword = updateMyPassword;
+window.toggleEditProfile = toggleEditProfile;
+window.toggleLoginBox = toggleLoginBox;
+window.resetPassword = resetPassword;
+
