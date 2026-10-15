@@ -61,9 +61,38 @@
         <!-- Buyer sign up (simple) -->
         <div id="buyerForm" class="role-form">
           <p class="form-note">Buyers can search and view prices for free.</p>
-          <input type="text" id="buyerName" placeholder="Your name">
+          <input type="text" id="buyerFirstName" placeholder="First name">
+          <input type="text" id="buyerLastName" placeholder="Last name">
+          <input type="text" id="buyerUsername" placeholder="Username (e.g. ikechi212)" oninput="checkUsernameLive(this.value)">
+          <p id="usernameCheckResult" class="form-note"></p>
+
+          <p class="form-note" style="margin-bottom:4px;">Date of birth</p>
+          <div class="dob-row">
+            <select id="buyerDobMonth"><option value="">Month</option></select>
+            <select id="buyerDobDay"><option value="">Day</option></select>
+            <select id="buyerDobYear"><option value="">Year</option></select>
+          </div>
+
           <input type="email" id="buyerEmail" placeholder="Email address">
-          <input type="password" id="buyerPassword" placeholder="Password (min 6 characters)">
+
+          <input type="password" id="buyerPassword" placeholder="Create a strong password" oninput="checkPasswordStrength(this.value)">
+          <div class="strength-checklist">
+            <span id="checkLength">⚪ At least 8 characters</span>
+            <span id="checkUpper">⚪ One uppercase letter (A-Z)</span>
+            <span id="checkNumber">⚪ One number (0-9)</span>
+            <span id="checkSpecial">⚪ One special character (!@#$%^&*)</span>
+          </div>
+
+          <input type="password" id="buyerConfirmPassword" placeholder="Confirm password" oninput="checkPasswordMatch()" style="margin-top:10px;">
+          <p id="passwordMatchResult" class="form-note"></p>
+
+          <label class="checkbox-row">
+            <input type="checkbox" id="buyerAgreeTerms">
+            <span>I agree to the Terms of Service and Privacy Policy</span>
+          </label>
+
+          <p class="form-note">By creating an account, you confirm you are at least 16 years old.</p>
+
           <button onclick="signUpBuyer()">Sign Up as Buyer</button>
         </div>
 
