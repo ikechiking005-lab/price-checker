@@ -8,6 +8,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <script>emailjs.init({ publicKey: "_s1apu3ev32xwAAVr" });</script>
 </head>
 <body>
 
@@ -100,11 +102,30 @@
         <div id="sellerForm" class="role-form" style="display:none;">
           <p class="form-note">⚠️ Seller accounts are reviewed before you can add prices. Please provide real details.</p>
           <input type="text" id="sellerName" placeholder="Your full name">
+          <input type="text" id="sellerUsername" placeholder="Username (e.g. mikeselectronics)" oninput="checkUsernameLive(this.value, 'sellerUsernameCheckResult')">
+          <p id="sellerUsernameCheckResult" class="form-note"></p>
+
           <input type="text" id="sellerShop" placeholder="Shop / stall name">
           <input type="text" id="sellerMarket" placeholder="Market & location (e.g. Yaba Market, Lagos)">
           <input type="tel" id="sellerPhone" placeholder="Phone number">
           <input type="email" id="sellerEmail" placeholder="Email address">
-          <input type="password" id="sellerPassword" placeholder="Password (min 6 characters)">
+
+          <input type="password" id="sellerPassword" placeholder="Create a strong password" oninput="checkPasswordStrength(this.value, 'seller')">
+          <div class="strength-checklist">
+            <span id="sellerCheckLength">⚪ At least 8 characters</span>
+            <span id="sellerCheckUpper">⚪ One uppercase letter (A-Z)</span>
+            <span id="sellerCheckNumber">⚪ One number (0-9)</span>
+            <span id="sellerCheckSpecial">⚪ One special character (!@#$%^&*)</span>
+          </div>
+
+          <input type="password" id="sellerConfirmPassword" placeholder="Confirm password" oninput="checkPasswordMatch('seller')" style="margin-top:10px;">
+          <p id="sellerPasswordMatchResult" class="form-note"></p>
+
+          <label class="checkbox-row">
+            <input type="checkbox" id="sellerAgreeTerms">
+            <span>I agree to the Terms of Service and Privacy Policy</span>
+          </label>
+
           <button onclick="signUpSeller()">Apply as Seller</button>
         </div>
 
@@ -121,6 +142,16 @@
         <p id="authStatus"></p>
       </div>
 
+    </section>
+
+    <!-- EMAIL VERIFICATION: shown right after signup until the code is confirmed -->
+    <section class="account-section" id="emailVerifySection" style="display:none;">
+      <h2>✉️ Verify your email</h2>
+      <p class="form-note">Enter the 6-digit code sent to <strong id="verifyEmailAddress"></strong>.</p>
+      <input type="text" id="verifyCodeInput" placeholder="6-digit code" maxlength="6">
+      <button onclick="verifyEmailCode()">Verify account</button>
+      <a href="#" class="text-link" onclick="resendVerificationCode(); return false;">Resend code</a>
+      <p id="verifyStatus"></p>
     </section>
 
     <!-- ADMIN PANEL: only visible when logged in as admin -->
@@ -207,12 +238,29 @@
         <h2 id="addPriceHeading">➕ Add Product</h2>
         <p id="addPriceNote"></p>
         <div id="addPriceForm" style="display:none;">
+          <label class="form-note" for="itemPhoto">📷 Product photo</label>
+          <input type="file" id="itemPhoto" accept="image/*" style="margin-bottom:10px;">
+
           <input type="text" id="itemName" placeholder="Item name (e.g. garri)">
           <input type="text" id="itemPrice" placeholder="Price (e.g. ₦2,000)">
           <input type="text" id="itemLocation" placeholder="Location (e.g. Yaba Market)">
+          <select id="itemCategory">
+            <option value="food">🌾 Food</option>
+            <option value="fuel">⛽ Fuel</option>
+            <option value="transport">🚌 Transport</option>
+            <option value="building">🧱 Building</option>
+            <option value="electronics">📱 Electronics</option>
+          </select>
           <button onclick="addPrice()">Add Product</button>
         </div>
         <p id="addStatus"></p>
+      </section>
+
+      <section class="product-feed-section">
+        <h2>🔥 Products Near You</h2>
+        <div id="productFeedList" class="product-grid">
+          <p class="form-note">Loading products...</p>
+        </div>
       </section>
 
       <section class="list-section">
