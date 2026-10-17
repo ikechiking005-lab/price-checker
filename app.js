@@ -18,8 +18,10 @@ import {
   collection,
   query,
   where,
+  orderBy,
   getDocs,
-  updateDoc
+  updateDoc,
+  addDoc
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 
@@ -52,6 +54,64 @@ let prices = [
 // ===== RUNS AS SOON AS THE PAGE LOADS =====
 renderAllPrices();
 trackVisit();
+loadProductFeed();
+
+// ===== SHRINK AN IMAGE FILE TO A SMALL DATA-URL (no Firebase Storage needed) =====
+function resizeImageToDataURL(file, maxWidth) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxWidth / img.width);
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.7));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ===== LOAD AND DISPLAY THE PRODUCT FEED =====
+async function loadProductFeed() {
+  const feedDiv = document.getElementById("productFeedList");
+  try {
+    const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) {
+      feedDiv.innerHTML = "<p class='form-note'>No products posted yet. Be the first verified seller to add one!</p>";
+      return;
+    }
+
+    let html = "";
+    snapshot.forEach((docSnap) => {
+      const p = docSnap.data();
+      html += `
+        <div class="product-card">
+          <img src="${p.imageData}" alt="${p.itemName}" class="product-img">
+          <div class="product-info">
+            <p class="product-name">${capitalize(p.itemName)}</p>
+            <p class="product-price">${p.price}</p>
+            <p class="product-location">📍 ${p.location}</p>
+            <p class="product-seller">🟢 ${p.sellerName}</p>
+          </div>
+        </div>
+      `;
+    });
+    feedDiv.innerHTML = html;
+  } catch (error) {
+    feedDiv.innerHTML = "<p class='form-note'>Could not load products right now.</p>";
+    console.log("Product feed error:", error);
+  }
+}
 
 // ===== TRACK A PAGE VISIT (for link-click stats in the Admin Panel) =====
 async function trackVisit() {
@@ -72,8 +132,17 @@ onAuthStateChanged(auth, async (user) => {
     // Look up this user's role from Firestore
     const userDoc = await getDoc(doc(db, "users", user.uid));
     const userData = userDoc.exists() ? userDoc.data() : { role: "buyer", name: user.email };
-    currentUserRole = userData.role;
-    showLoggedInView(userData.name || user.email, currentUserRole, userData.photoURL, userData.coverURL);
+
+    // Accounts created before this feature existed have no emailVerified field — treat them as verified
+    // so existing users (including the admin account) are never locked out.
+    const needsVerification = userData.emailVerified === false;
+
+    if (needsVerification) {
+      showEmailVerifyView(user.email);
+    } else {
+      currentUserRole = userData.role;
+      showLoggedInView(userData.name || user.email, currentUserRole, userData.photoURL, userData.coverURL);
+    }
   } else {
     currentUserRole = null;
     showLoggedOutView();
@@ -114,8 +183,8 @@ populateDobDropdowns();
 
 // ===== LIVE USERNAME AVAILABILITY CHECK (as they type, lightly debounced) =====
 let usernameCheckTimer = null;
-function checkUsernameLive(value) {
-  const resultEl = document.getElementById("usernameCheckResult");
+function checkUsernameLive(value, resultElId) {
+  const resultEl = document.getElementById(resultElId || "usernameCheckResult");
   const clean = value.toLowerCase().replace(/[^a-z0-9_]/g, "");
 
   if (clean.length < 3) {
@@ -250,7 +319,8 @@ async function signUpBuyer() {
       email: email,
       role: "buyer"
     });
-    status.innerHTML = "✅ Account created! You're now logged in.";
+    await sendVerificationEmail(result.user.uid, email);
+    status.innerHTML = "✅ Account created! Check your email for a verification code.";
   } catch (error) {
     status.innerHTML = "❌ " + friendlyError(error);
   }
@@ -281,10 +351,79 @@ async function signUpSeller() {
       email: email,
       role: "pending_seller"
     });
-    status.innerHTML = "✅ Application submitted! Your account is pending review before you can add products.";
+    await sendVerificationEmail(result.user.uid, email);
+    status.innerHTML = "✅ Application submitted! Check your email for a verification code.";
   } catch (error) {
     status.innerHTML = "❌ " + friendlyError(error);
   }
+}
+
+// ===== GENERATE AND SEND A 6-DIGIT VERIFICATION CODE =====
+function generateCode() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+async function sendVerificationEmail(uid, email) {
+  const code = generateCode();
+  const expiry = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+  await setDoc(doc(db, "users", uid), {
+    emailVerified: false,
+    verificationCode: code,
+    codeExpiry: expiry
+  }, { merge: true });
+
+  try {
+    await emailjs.send("service_vmqy846", "template_ng1ntth", {
+      to_email: email,
+      code: code
+    });
+  } catch (error) {
+    console.log("Email send failed:", error);
+  }
+}
+
+// ===== SHOW THE VERIFICATION SCREEN =====
+function showEmailVerifyView(email) {
+  document.getElementById("loggedOutView").style.display = "none";
+  document.getElementById("emailVerifySection").style.display = "block";
+  document.getElementById("verifyEmailAddress").innerText = email;
+}
+
+// ===== VERIFY THE ENTERED CODE =====
+async function verifyEmailCode() {
+  const enteredCode = document.getElementById("verifyCodeInput").value.trim();
+  const status = document.getElementById("verifyStatus");
+
+  if (!enteredCode) {
+    status.innerHTML = "⚠️ Please enter the 6-digit code.";
+    return;
+  }
+
+  const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
+  const userData = userDoc.data();
+
+  if (!userData.verificationCode || Date.now() > userData.codeExpiry) {
+    status.innerHTML = "❌ This code has expired. Please tap 'Resend code'.";
+    return;
+  }
+
+  if (enteredCode !== userData.verificationCode) {
+    status.innerHTML = "❌ Incorrect code. Please try again.";
+    return;
+  }
+
+  await setDoc(doc(db, "users", auth.currentUser.uid), { emailVerified: true }, { merge: true });
+  status.innerHTML = "✅ Email verified! Loading your account...";
+  setTimeout(() => location.reload(), 1200);
+}
+
+// ===== RESEND THE VERIFICATION CODE =====
+async function resendVerificationCode() {
+  const status = document.getElementById("verifyStatus");
+  status.innerHTML = "⏳ Sending a new code...";
+  await sendVerificationEmail(auth.currentUser.uid, auth.currentUser.email);
+  status.innerHTML = "✅ A new code has been sent.";
 }
 
 // ===== TOGGLE LOGIN BOX OPEN/CLOSED =====
@@ -420,6 +559,7 @@ function showLoggedOutView() {
   document.getElementById("marketplaceContent").style.display = "none";
   document.getElementById("aboutMenuLink").style.display = "none";
   document.getElementById("addPriceMenuLink").style.display = "none";
+  document.getElementById("emailVerifySection").style.display = "none";
 }
 
 // Holds the last-loaded seller lists so switching tabs doesn't need a fresh database read
@@ -607,30 +747,61 @@ function searchPrice() {
 }
 
 // ===== ADD A NEW PRICE (only reachable by verified sellers, UI-gated) =====
-function addPrice() {
+async function addPrice() {
   const item = document.getElementById("itemName").value.trim();
   const price = document.getElementById("itemPrice").value.trim();
   const location = document.getElementById("itemLocation").value.trim();
+  const category = document.getElementById("itemCategory").value;
+  const photoFile = document.getElementById("itemPhoto").files[0];
   const status = document.getElementById("addStatus");
 
   if (currentUserRole !== "verified_seller") {
-    status.innerHTML = "⚠️ Only verified sellers can add prices.";
+    status.innerHTML = "⚠️ Only verified sellers can add products.";
     return;
   }
 
   if (item === "" || price === "" || location === "") {
-    status.innerHTML = "⚠️ Please fill in all three fields.";
+    status.innerHTML = "⚠️ Please fill in item name, price, and location.";
     return;
   }
 
-  prices.push({ item: item, price: price, location: location });
-  status.innerHTML = "✅ Price added! Thank you.";
+  if (!photoFile) {
+    status.innerHTML = "⚠️ Please add a product photo.";
+    return;
+  }
 
-  document.getElementById("itemName").value = "";
-  document.getElementById("itemPrice").value = "";
-  document.getElementById("itemLocation").value = "";
+  status.innerHTML = "⏳ Uploading product...";
 
-  renderAllPrices();
+  try {
+    const imageData = await resizeImageToDataURL(photoFile, 500);
+
+    await addDoc(collection(db, "products"), {
+      itemName: item,
+      price: price,
+      location: location,
+      category: category,
+      imageData: imageData,
+      sellerId: auth.currentUser.uid,
+      sellerName: auth.currentUser.displayName || auth.currentUser.email,
+      createdAt: Date.now()
+    });
+
+    // Also keep it in the simple price-report list for the comparison view
+    prices.push({ item: item, price: price, location: location });
+    renderAllPrices();
+
+    status.innerHTML = "✅ Product added! Thank you.";
+
+    document.getElementById("itemName").value = "";
+    document.getElementById("itemPrice").value = "";
+    document.getElementById("itemLocation").value = "";
+    document.getElementById("itemPhoto").value = "";
+
+    loadProductFeed();
+  } catch (error) {
+    status.innerHTML = "❌ Something went wrong. Please try a smaller photo.";
+    console.log("Add product error:", error);
+  }
 }
 
 // ===== SHOW ALL PRICES =====
@@ -686,9 +857,10 @@ window.switchSellerTab = switchSellerTab;
 window.checkUsernameLive = checkUsernameLive;
 window.checkPasswordStrength = checkPasswordStrength;
 window.checkPasswordMatch = checkPasswordMatch;
+window.verifyEmailCode = verifyEmailCode;
+window.resendVerificationCode = resendVerificationCode;
 window.updateMyName = updateMyName;
 window.updateMyPassword = updateMyPassword;
 window.toggleEditProfile = toggleEditProfile;
 window.toggleLoginBox = toggleLoginBox;
 window.resetPassword = resetPassword;
-
