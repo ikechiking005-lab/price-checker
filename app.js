@@ -43,16 +43,7 @@ const db = getFirestore(app);
 // Keeps track of the currently logged-in user's role ("buyer", "pending_seller", "verified_seller")
 let currentUserRole = null;
 
-// ===== PRICE DATA (still in-memory for now — Phase 3 will save this permanently) =====
-let prices = [
-  { item: "garri", price: "₦2,000 - ₦2,200 per paint bucket", location: "Yaba Market" },
-  { item: "beans", price: "₦3,500 - ₦3,800 per paint bucket", location: "Yaba Market" },
-  { item: "rice", price: "₦75,000 - ₦80,000 per 50kg bag", location: "Mile 12 Market" },
-  { item: "fuel", price: "₦900 - ₦950 per litre", location: "Lagos" }
-];
-
 // ===== RUNS AS SOON AS THE PAGE LOADS =====
-renderAllPrices();
 trackVisit();
 loadProductFeed();
 
@@ -80,37 +71,63 @@ function resizeImageToDataURL(file, maxWidth) {
 }
 
 // ===== LOAD AND DISPLAY THE PRODUCT FEED =====
+// Holds every product fetched from Firestore, so search/location filtering is instant (no re-fetching)
+let allProducts = [];
+
 async function loadProductFeed() {
   const feedDiv = document.getElementById("productFeedList");
   try {
     const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
     const snapshot = await getDocs(q);
-
-    if (snapshot.empty) {
-      feedDiv.innerHTML = "<p class='form-note'>No products posted yet. Be the first verified seller to add one!</p>";
-      return;
-    }
-
-    let html = "";
-    snapshot.forEach((docSnap) => {
-      const p = docSnap.data();
-      html += `
-        <div class="product-card">
-          <img src="${p.imageData}" alt="${p.itemName}" class="product-img">
-          <div class="product-info">
-            <p class="product-name">${capitalize(p.itemName)}</p>
-            <p class="product-price">${p.price}</p>
-            <p class="product-location">📍 ${p.location}</p>
-            <p class="product-seller">🟢 ${p.sellerName}</p>
-          </div>
-        </div>
-      `;
-    });
-    feedDiv.innerHTML = html;
+    allProducts = [];
+    snapshot.forEach((docSnap) => allProducts.push(docSnap.data()));
+    renderProductFeed();
   } catch (error) {
     feedDiv.innerHTML = "<p class='form-note'>Could not load products right now.</p>";
     console.log("Product feed error:", error);
   }
+}
+
+// ===== FILTER THE CACHED PRODUCTS BY SEARCH TEXT + LOCATION, THEN DISPLAY =====
+function renderProductFeed() {
+  const feedDiv = document.getElementById("productFeedList");
+  const searchBox = document.getElementById("searchBox");
+  const locationFilter = document.getElementById("locationFilter");
+
+  const searchTerm = searchBox ? searchBox.value.toLowerCase().trim() : "";
+  const locationTerm = locationFilter ? locationFilter.value.toLowerCase().trim() : "";
+
+  const matches = allProducts.filter((p) => {
+    const matchesSearch = searchTerm === "" || p.itemName.toLowerCase().includes(searchTerm);
+    const matchesLocation = locationTerm === "" || p.location.toLowerCase().includes(locationTerm);
+    return matchesSearch && matchesLocation;
+  });
+
+  if (allProducts.length === 0) {
+    feedDiv.innerHTML = "<p class='form-note'>No products posted yet. Be the first verified seller to add one!</p>";
+    return;
+  }
+
+  if (matches.length === 0) {
+    feedDiv.innerHTML = "<p class='form-note'>No products match your search.</p>";
+    return;
+  }
+
+  let html = "";
+  matches.forEach((p) => {
+    html += `
+      <div class="product-card">
+        <img src="${p.imageData}" alt="${p.itemName}" class="product-img">
+        <div class="product-info">
+          <p class="product-name">${capitalize(p.itemName)}</p>
+          <p class="product-price">${p.price}</p>
+          <p class="product-location">📍 ${p.location}</p>
+          <p class="product-seller">🟢 ${p.sellerName}</p>
+        </div>
+      </div>
+    `;
+  });
+  feedDiv.innerHTML = html;
 }
 
 // ===== TRACK A PAGE VISIT (for link-click stats in the Admin Panel) =====
@@ -725,27 +742,6 @@ function toggleMenu() {
   document.getElementById("overlay").classList.toggle("show");
 }
 
-// ===== SEARCH FOR A PRICE =====
-function searchPrice() {
-  const input = document.getElementById("searchBox").value.toLowerCase().trim();
-  const resultDiv = document.getElementById("result");
-
-  if (input === "") {
-    resultDiv.innerHTML = "Please type an item to search.";
-    return;
-  }
-
-  const matches = prices.filter(p => p.item.toLowerCase().includes(input));
-
-  if (matches.length > 0) {
-    resultDiv.innerHTML = matches
-      .map(p => `${capitalize(p.item)}: ${p.price} (${p.location})`)
-      .join("<br>");
-  } else {
-    resultDiv.innerHTML = `No results for "${input}" yet.`;
-  }
-}
-
 // ===== ADD A NEW PRICE (only reachable by verified sellers, UI-gated) =====
 async function addPrice() {
   const item = document.getElementById("itemName").value.trim();
@@ -786,10 +782,6 @@ async function addPrice() {
       createdAt: Date.now()
     });
 
-    // Also keep it in the simple price-report list for the comparison view
-    prices.push({ item: item, price: price, location: location });
-    renderAllPrices();
-
     status.innerHTML = "✅ Product added! Thank you.";
 
     document.getElementById("itemName").value = "";
@@ -802,14 +794,6 @@ async function addPrice() {
     status.innerHTML = "❌ Something went wrong. Please try a smaller photo.";
     console.log("Add product error:", error);
   }
-}
-
-// ===== SHOW ALL PRICES =====
-function renderAllPrices() {
-  const container = document.getElementById("allPrices");
-  container.innerHTML = prices
-    .map(p => `<div class="price-item"><strong>${capitalize(p.item)}</strong> — ${p.price} <br><small>${p.location}</small></div>`)
-    .join("");
 }
 
 function capitalize(word) {
@@ -848,7 +832,7 @@ window.signUpSeller = signUpSeller;
 window.logIn = logIn;
 window.logOut = logOut;
 window.toggleMenu = toggleMenu;
-window.searchPrice = searchPrice;
+window.renderProductFeed = renderProductFeed;
 window.addPrice = addPrice;
 window.approveSeller = approveSeller;
 window.rejectSeller = rejectSeller;
