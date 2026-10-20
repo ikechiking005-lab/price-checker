@@ -198,10 +198,20 @@
     <div id="marketplaceContent" style="display:none;">
 
       <section class="search-section">
-        <p class="location-line">📍 All Nigeria ▾ <span class="location-note">(location filter coming soon)</span></p>
-        <input type="text" id="searchBox" placeholder="Search an item (e.g. garri, beans, fuel)">
-        <button onclick="searchPrice()">Search</button>
-        <div id="result"></div>
+        <select id="locationFilter" onchange="renderProductFeed()" class="location-select">
+          <option value="">📍 All Nigeria</option>
+          <option value="Lagos">Lagos</option>
+          <option value="Abuja">Abuja</option>
+          <option value="Port Harcourt">Port Harcourt</option>
+          <option value="Aba">Aba</option>
+          <option value="Benin City">Benin City</option>
+          <option value="Kano">Kano</option>
+          <option value="Ibadan">Ibadan</option>
+          <option value="Onitsha">Onitsha</option>
+          <option value="Enugu">Enugu</option>
+        </select>
+        <input type="text" id="searchBox" placeholder="Search an item (e.g. garri, beans, fuel)" oninput="renderProductFeed()">
+        <button onclick="renderProductFeed()">Search</button>
       </section>
 
       <section class="categories-section">
@@ -261,11 +271,6 @@
         <div id="productFeedList" class="product-grid">
           <p class="form-note">Loading products...</p>
         </div>
-      </section>
-
-      <section class="list-section">
-        <h2>📋 All Reported Prices</h2>
-        <div id="allPrices"></div>
       </section>
 
       <section class="about-section" id="about">
