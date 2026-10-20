@@ -393,10 +393,20 @@ async function sendVerificationEmail(uid, email) {
   try {
     await emailjs.send("service_vmqy846", "template_ng1ntth", {
       to_email: email,
-      code: code
+      email: email,
+      code: code,
+      passcode: code,
+      time: "10 minutes"
     });
+    return true;
   } catch (error) {
     console.log("Email send failed:", error);
+    const statusEl = document.getElementById("verifyStatus");
+    if (statusEl) {
+      const reason = (error && (error.text || error.message)) || "unknown error";
+      statusEl.innerHTML = "❌ We couldn't send the email (" + reason + "). Tap 'Resend code' to try again.";
+    }
+    return false;
   }
 }
 
@@ -439,8 +449,10 @@ async function verifyEmailCode() {
 async function resendVerificationCode() {
   const status = document.getElementById("verifyStatus");
   status.innerHTML = "⏳ Sending a new code...";
-  await sendVerificationEmail(auth.currentUser.uid, auth.currentUser.email);
-  status.innerHTML = "✅ A new code has been sent.";
+  const sent = await sendVerificationEmail(auth.currentUser.uid, auth.currentUser.email);
+  if (sent) {
+    status.innerHTML = "✅ A new code has been sent. Check your inbox and spam folder.";
+  }
 }
 
 // ===== TOGGLE LOGIN BOX OPEN/CLOSED =====
@@ -749,6 +761,7 @@ async function addPrice() {
   const location = document.getElementById("itemLocation").value.trim();
   const category = document.getElementById("itemCategory").value;
   const photoFile = document.getElementById("itemPhoto").files[0];
+  const videoUrlRaw = document.getElementById("itemVideoUrl").value.trim();
   const status = document.getElementById("addStatus");
 
   if (currentUserRole !== "verified_seller") {
