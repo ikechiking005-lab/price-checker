@@ -116,6 +116,18 @@ header {
   font-size: 14px;
 }
 
+.location-select {
+  width: 100%;
+  padding: 11px;
+  margin-bottom: 10px;
+  border: 1px solid #ddd3ba;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary);
+  background: #fffefb;
+}
+
 .location-line {
   font-size: 13px;
   color: var(--primary);
